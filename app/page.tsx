@@ -1,103 +1,60 @@
 import Image from "next/image";
+import Navbar from "../components/Navbar";
+import { FiMapPin, FiBriefcase, FiUsers } from "react-icons/fi";
+import Path from "@/components/Path";
+import ThreeStepProcess from "@/components/ThreeStepProcess";
+import WhyJVA from "@/components/WhyJVA";
+import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <>
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 flex flex-col items-center justify-center px-4 sm:px-8 lg:px-24 py-32 ">
+      {/* Hero Section */}
+      <main className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left max-w-xl lg:max-w-5xl w-full gap-12">
+        {/* Left Side (Text) */}
+        <div className="flex flex-col items-center lg:items-start w-full lg:w-1/2">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2 lg:mb-4">
+            Where Land Meets{" "}
+            <span className="text-yellow-400">Capital & Vision</span>
+          </h1>
+          <p className="text-gray-200 text-base sm:text-lg lg:text-xl mb-8 lg:mb-10 max-w-md lg:max-w-lg">
+            Connect landowners, individual & group investors, cooperatives,
+            government entities, and mandates for profitable real estate joint
+            ventures. We manage the process, you reap the rewards.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xs lg:max-w-md">
+            <a
+              href="#get-started"
+              className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-3 px-6 rounded-lg shadow transition-colors flex items-center justify-center"
+            >
+              Get Started Today &rarr;
+            </a>
+            <a
+              href="#how-it-works"
+              className="border border-white text-white font-medium py-3 px-6 rounded-lg hover:bg-white hover:text-gray-900 transition-colors"
+            >
+              Learn How It Works
+            </a>
+          </div>
+        </div>
+        {/* Right Side (Optional Image for Desktop) */}
+        <div className="hidden lg:flex w-1/2 justify-center items-center">
+          {/* Replace with your own image if desired */}
+          <Image
+            src="/hero-real-estate.jpg"
+            alt="Real Estate Joint Venture"
+            width={400}
+            height={400}
+            className="rounded-xl shadow-lg object-cover"
+            priority
+          />
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
+    <Path />
+    <ThreeStepProcess />
+    <WhyJVA />
+    </>
   );
 }
