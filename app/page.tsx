@@ -1,10 +1,7 @@
 import Image from "next/image";
-import Navbar from "../components/Navbar";
-import { FiMapPin, FiBriefcase, FiUsers } from "react-icons/fi";
 import Path from "@/components/Path";
 import ThreeStepProcess from "@/components/ThreeStepProcess";
 import WhyJVA from "@/components/WhyJVA";
-import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
