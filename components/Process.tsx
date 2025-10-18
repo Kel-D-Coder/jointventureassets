@@ -1,3 +1,4 @@
+// import "../styles/animation.css"
 
 export default function Process() {
     return (
@@ -11,7 +12,7 @@ export default function Process() {
           <div className="flex flex-col lg:flex-row gap-8 items-start">
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-4">
-                <div className="bg-gray-900 text-yellow-400 font-bold text-2xl w-12 h-12 flex items-center justify-center rounded-full border-4 border-yellow-400">1</div>
+                <div className="bg-gray-900 text-yellow-400 font-bold text-2xl w-12 h-12 flex items-center justify-center rounded-full border-4 border-yellow-400 step-circle">1</div>
                 <h3 className="font-bold text-xl text-gray-900">Registration & Verification</h3>
               </div>
               <p className="text-gray-700 mb-4">
@@ -59,7 +60,7 @@ export default function Process() {
           <div className="flex flex-col lg:flex-row gap-8 items-start">
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-4">
-                <div className="bg-gray-900 text-yellow-400 font-bold text-2xl w-12 h-12 flex items-center justify-center rounded-full border-4 border-yellow-400">2</div>
+                <div className="bg-gray-900 text-yellow-400 font-bold text-2xl w-12 h-12 flex items-center justify-center rounded-full border-4 border-yellow-400 step-circle">2</div>
                 <h3 className="font-bold text-xl text-gray-900">Submit Your Needs</h3>
               </div>
               <p className="text-gray-700 mb-4">
@@ -101,7 +102,7 @@ export default function Process() {
           <div className="flex flex-col lg:flex-row gap-8 items-start">
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-4">
-                <div className="bg-yellow-400 text-gray-900 font-bold text-2xl w-12 h-12 flex items-center justify-center rounded-full border-4 border-gray-900">3</div>
+                <div className="bg-yellow-400 text-gray-900 font-bold text-2xl w-12 h-12 flex items-center justify-center rounded-full border-4 border-gray-900 step-circle">3</div>
                 <h3 className="font-bold text-xl text-gray-900">Smart Matching & Connection</h3>
               </div>
               <p className="text-gray-700 mb-4">
@@ -149,7 +150,7 @@ export default function Process() {
           <div className="flex flex-col lg:flex-row gap-8 items-start">
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-4">
-                <div className="bg-yellow-400 text-gray-900 font-bold text-2xl w-12 h-12 flex items-center justify-center rounded-full border-4 border-gray-900">4</div>
+                <div className="bg-yellow-400 text-gray-900 font-bold text-2xl w-12 h-12 flex items-center justify-center rounded-full border-4 border-gray-900 step-circle">4</div>
                 <h3 className="font-bold text-xl text-gray-900">Project Management & Success</h3>
               </div>
               <p className="text-gray-700 mb-4">
