@@ -3,7 +3,6 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import NavbarWrapper from "@/components/NavbarWrapper";
 import FooterWrapper from "@/components/FooterWrapper";
-import AOSWrapper from "@/components/AOSWrapper";
 
 // const geistSans = Poppins({
 //   variable: "--font-geist-sans",
