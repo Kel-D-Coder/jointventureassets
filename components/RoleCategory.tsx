@@ -34,7 +34,7 @@ const RoleCategory = () => {
   const searchParams = useSearchParams();
   const role = searchParams.get("role");
 
-  const handleCategoryClick = (categoryId: number) => {
+  const handleCategoryClick = () => {
     // Navigate to register form with role and step parameters
     router.push(`/register?role=${role}&step=register`);
   };
@@ -72,7 +72,7 @@ const RoleCategory = () => {
           },
         }}
       >
-        {categories.map((category, index) => (
+        {categories.map((category) => (
           <motion.div
             key={category.id}
             variants={{
