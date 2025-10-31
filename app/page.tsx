@@ -50,14 +50,14 @@ export default function Home() {
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
                 <a
-                  href="#get-started"
+                  href="/register"
                   className="inline-flex items-center gap-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-3 px-6 rounded-full shadow-lg transition-all transform hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-yellow-300"
                 >
                   Get Started Today
                   <FiChevronRight />
                 </a>
                 <a
-                  href="#how-it-works"
+                  href="/how-it-works"
                   className="inline-flex items-center gap-3 border border-white text-white font-medium py-3 px-6 rounded-full hover:bg-white hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-white/40"
                 >
                   Learn How It Works

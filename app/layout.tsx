@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { Montserrat } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import NavbarWrapper from "@/components/NavbarWrapper";
 import FooterWrapper from "@/components/FooterWrapper";
+import StoreProvider from "@/store/StoreProvider";
 
-const montserrat = Montserrat({
+const inter = Inter({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700', '800'],
-  variable: '--font-montserrat',
+  variable: '--font-inter',
   display: 'swap'
 });
 
@@ -24,11 +25,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${montserrat.variable} antialiased`}
+        className={`${inter.variable} antialiased`}
       >
-        <NavbarWrapper />
+        <StoreProvider>
+          <NavbarWrapper />
           {children}
-        <FooterWrapper />
+          <FooterWrapper />
+        </StoreProvider>
       </body>
     </html>
   );

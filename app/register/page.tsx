@@ -11,21 +11,21 @@ import RegisterForm from "@/components/RegisterForm";
 
 const roles = [
   {
-    id: "landowner",
+    id: "Landowner",
     title: "Landowner",
     description: "I have land and want to partner with individual or group investors.",
     icon: FiMapPin,
     color: "yellow",
   },
   {
-    id: "investor-developer",
-    title: "Investor / Developer",
+    id: "Investor",
+    title: "Investor",
     description: "I have capital, want to find land, or form/join investor groups.",
     icon: FiHome,
     color: "yellow",
   },
   {
-    id: "mandate",
+    id: "Mandate",
     title: "Mandate",
     description: "I facilitate partnerships between landowners and investors.",
     icon: FiUsers,
@@ -95,11 +95,12 @@ function RoleSelectorContent() {
   const searchParams = useSearchParams();
   const role = searchParams.get("role");
   const step = searchParams.get("step");
+  const category = searchParams.get("category");
 
   // Show register form if step is register
   if (role && step === "register") {
     const selectedRole = roles.find((r) => r.id === role);
-    return <RegisterForm role={selectedRole?.title || "User"} />;
+    return <RegisterForm role={selectedRole?.title || "User"} category={category || ""} />;
   }
 
   // Show category selection if a role is selected

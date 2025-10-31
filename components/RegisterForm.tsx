@@ -1,10 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiArrowRight, FiEye, FiEyeOff } from "react-icons/fi";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { Spinner } from "./Spinner";
+import { AppDispatch } from "@/store/store";
+import { useDispatch } from "react-redux";
+import { setCredentials } from "@/store/authSlice";
 
 // Animation variants
 const containerVariants = {
@@ -43,27 +48,46 @@ const inputFocusVariants = {
 
 interface RegisterFormProps {
   role?: string;
+  category?: string;
 }
 
-export default function RegisterForm({ role = "Mandate" }: RegisterFormProps) {
+export default function RegisterForm({ role = "Mandate", category = "" }: RegisterFormProps) {
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
+    role: "",
+    category: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Form submitted:", formData);
-    // Handle registration logic here
-    // After successful registration, redirect to dashboard or home
-    router.push("/");
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URL}/auth/register`, formData);
+      setSuccessMsg(response.data.message);
+      console.log("Registration successful:", response.data);
+      dispatch(setCredentials({ user: response.data.user, token: response.data.token }));
+      // Redirect to complete profile page with role and category
+      router.push(`/complete-profile?role=${encodeURIComponent(formData.role)}&category=${encodeURIComponent(formData.category)}`);
+    } catch(error: any) {
+      console.error("Registration failed:", error);
+      setError(error.response?.data?.message || "Something went wrong. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,7 +95,16 @@ export default function RegisterForm({ role = "Mandate" }: RegisterFormProps) {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    console.log(formData)
   };
+
+  useEffect(() => {
+    setFormData({
+      ...formData,
+      role: role,
+      category: category,
+    });
+  }, [role, category]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center px-6 py-12 relative overflow-hidden">
@@ -274,38 +307,71 @@ export default function RegisterForm({ role = "Mandate" }: RegisterFormProps) {
               </motion.div>
             </motion.div>
 
+            {/* Error/Success Message */}
+            {(error || successMsg) && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className={`${
+                  error
+                    ? "bg-red-50 border-2 border-red-300 text-red-800"
+                    : "bg-green-50 border-2 border-green-300 text-green-800"
+                } px-5 py-4 rounded-xl text-sm font-medium shadow-sm`}
+              >
+                <div className="flex justify-center items-center gap-3">
+                  <span className="flex-1 text-xl">{error || successMsg}</span>
+                </div>
+              </motion.div>
+            )}
+
             {/* Submit Button */}
             <motion.div variants={itemVariants}>
               <motion.button
                 type="submit"
-                className="w-full bg-yellow-500 text-gray-900 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 group overflow-hidden relative hover:cursor-pointer"
-                whileHover={{
+                disabled={loading}
+                className={`w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 group overflow-hidden relative transition-colors duration-300 ${
+                  loading 
+                    ? 'bg-gray-800 text-white cursor-wait' 
+                    : 'bg-yellow-500 text-gray-900 hover:cursor-pointer'
+                }`}
+                whileHover={!loading ? {
                   scale: 1.02,
                   boxShadow: "0 10px 25px -5px rgba(234, 179, 8, 0.5)",
-                }}
-                whileTap={{ scale: 0.98 }}
+                } : {}}
+                whileTap={!loading ? { scale: 0.98 } : {}}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
               >
-                <motion.span
-                  className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-yellow-600"
-                  initial={{ x: "-100%" }}
-                  whileHover={{ x: 0 }}
-                  transition={{ duration: 0.3 }}
-                />
-                <span className="relative z-10">Create Account</span>
-                <motion.span
-                  className="relative z-10"
-                  animate={{ x: [0, 5, 0] }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 1.5,
-                    ease: "easeInOut",
-                  }}
-                >
-                  <FiArrowRight size={20} />
-                </motion.span>
+                {!loading && (
+                  <motion.span
+                    className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-yellow-600"
+                    initial={{ x: "-100%" }}
+                    whileHover={{ x: 0 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                )}
+                {loading ? (
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Spinner />
+                  </span>
+                ) : (
+                  <>
+                    <span className="relative z-10">Create Account</span>
+                    <motion.span
+                      className="relative z-10"
+                      animate={{ x: [0, 5, 0] }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 1.5,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <FiArrowRight size={20} />
+                    </motion.span>
+                  </>
+                )}
               </motion.button>
             </motion.div>
           </form>

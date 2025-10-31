@@ -5,8 +5,7 @@ import Footer from "./Footer";
 
 export default function FooterWrapper() {
     const pathname = usePathname();
-    console.log(pathname)
-    const hideNav = pathname === "/login" || pathname === "/register";
+    const hideNav = pathname === "/login" || pathname === "/register" || pathname === "/complete-profile";
 
     return !hideNav ? <Footer /> : null;
 }

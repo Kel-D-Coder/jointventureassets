@@ -1,11 +1,27 @@
 "use client"
 
 import Link from "next/link";
-import { FiMenu, FiX } from "react-icons/fi";
+import { FiMenu, FiX, FiUser, FiLogOut } from "react-icons/fi";
 import { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "@/store/store";
+import { logout } from "@/store/authSlice";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    dispatch(logout());
+    localStorage.removeItem("userId");
+    router.push("/");
+    setUserMenuOpen(false);
+  };
 
   return (
     <nav className="w-full bg-white shadow flex items-center px-4 sm:px-8 py-3 relative">
@@ -20,27 +36,75 @@ export default function Navbar() {
       </div>
       {/* Centered Navigation Links */}
       <div className="hidden md:flex flex-1 justify-center items-center gap-10">
-        <Link href="/" className="text-gray-700 hover:text-yellow-500 font-medium">
+        <Link href="/" className="text-gray-700 hover:text-yellow-500 font-medium transition-colors">
           Home
         </Link>
-        <Link href="how-it-works" className="text-gray-700 hover:text-yellow-500 font-medium">
+        <Link href="/how-it-works" className="text-gray-700 hover:text-yellow-500 font-medium transition-colors">
           How It Works
         </Link>
-        <Link href="/contact" className="text-gray-700 hover:text-yellow-500 font-medium">
+        {isAuthenticated && (
+          <Link href="/browse-requests" className="text-gray-700 hover:text-yellow-500 font-medium transition-colors">
+            Browse Requests
+          </Link>
+        )}
+        <Link href="/contact" className="text-gray-700 hover:text-yellow-500 font-medium transition-colors">
           Contact
         </Link>
       </div>
       {/* Actions Right */}
       <div className="hidden md:flex items-center gap-3">
-        <Link href="/login" className="text-gray-700 hover:text-yellow-500 font-medium">
-          Login
-        </Link>
-        <Link
-          href="/register"
-          className="bg-gray-900 hover:bg-yellow-400 text-white hover:text-gray-900 font-semibold px-5 py-2 rounded-lg transition-colors"
-        >
-          Get Started
-        </Link>
+        {isAuthenticated && user ? (
+          <div className="relative">
+            <motion.button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <FiUser className="text-gray-700" size={20} />
+              <span className="text-gray-900 font-medium">{user.fullName.split(" ")[0]}</span>
+            </motion.button>
+            <AnimatePresence>
+              {userMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-50"
+                >
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 transition-colors text-gray-700"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <FiUser size={16} />
+                    <span>Dashboard</span>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 transition-colors text-red-600 w-full"
+                  >
+                    <FiLogOut size={16} />
+                    <span>Logout</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <>
+            <Link href="/login" className="text-gray-700 hover:text-yellow-500 font-medium transition-colors">
+              Login
+            </Link>
+            <Link
+              href="/register"
+              className="bg-gray-900 hover:bg-yellow-400 text-white hover:text-gray-900 font-semibold px-5 py-2 rounded-lg transition-colors"
+            >
+              Get Started
+            </Link>
+          </>
+        )}
       </div>
       {/* Mobile Menu Icon */}
       <button
@@ -51,62 +115,77 @@ export default function Navbar() {
         <FiMenu />
       </button>
       {/* Mobile Drawer */}
-      {menuOpen && (
-        <div className="fixed inset-0 z-50 bg-white shadow-lg flex flex-col px-4 py-4 animate-slide-in">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="bg-gray-900 text-white rounded-lg px-3 py-2 font-bold text-sm">
-                JVA
-              </div>
-              <span className="font-bold text-gray-900 text-lg">
-                Joint Venture Assets
-              </span>
-            </div>
-            <button
-              className="text-gray-900 text-2xl"
-              aria-label="Close menu"
-              onClick={() => setMenuOpen(false)}
-            >
-              <FiX />
-            </button>
-          </div>
-          <Link href="/" className="py-2 text-gray-900 hover:text-yellow-500 font-medium" onClick={() => setMenuOpen(false)}>
-            Home
-          </Link>
-          <Link href="#how-it-works" className="py-2 text-gray-900 hover:text-yellow-500 font-medium" onClick={() => setMenuOpen(false)}>
-            How It Works
-          </Link>
-          <Link href="/contact" className="py-2 text-gray-900 hover:text-yellow-500 font-medium" onClick={() => setMenuOpen(false)}>
-            Contact
-          </Link>
-          <Link href="/login" className="py-2 text-gray-900 hover:text-yellow-500 font-medium" onClick={() => setMenuOpen(false)}>
-            Login
-          </Link>
-          <Link
-            href="#get-started"
-            className="py-2 mt-2 bg-gray-900 hover:bg-yellow-400 text-white hover:text-gray-900 font-semibold px-5 rounded-lg transition-colors text-center"
-            onClick={() => setMenuOpen(false)}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed inset-0 z-50 bg-white shadow-lg flex flex-col px-4 py-4"
           >
-            Get Started
-          </Link>
-        </div>
-      )}
-      {/* Optional: Add slide-in animation */}
-      <style jsx>{`
-        .animate-slide-in {
-          animation: slide-in 0.2s ease;
-        }
-        @keyframes slide-in {
-          from {
-            transform: translateY(-20px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-      `}</style>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="bg-gray-900 text-white rounded-lg px-3 py-2 font-bold text-sm">
+                  JVA
+                </div>
+                <span className="font-bold text-gray-900 text-lg">
+                  Joint Venture Assets
+                </span>
+              </div>
+              <button
+                className="text-gray-900 text-2xl"
+                aria-label="Close menu"
+                onClick={() => setMenuOpen(false)}
+              >
+                <FiX />
+              </button>
+            </div>
+            <Link href="/" className="py-2 text-gray-900 hover:text-yellow-500 font-medium" onClick={() => setMenuOpen(false)}>
+              Home
+            </Link>
+            <Link href="/how-it-works" className="py-2 text-gray-900 hover:text-yellow-500 font-medium" onClick={() => setMenuOpen(false)}>
+              How It Works
+            </Link>
+            {isAuthenticated && user ? (
+              <>
+                <Link href="/dashboard" className="py-2 text-gray-900 hover:text-yellow-500 font-medium" onClick={() => setMenuOpen(false)}>
+                  Dashboard
+                </Link>
+                <Link href="/browse-requests" className="py-2 text-gray-900 hover:text-yellow-500 font-medium" onClick={() => setMenuOpen(false)}>
+                  Browse Requests
+                </Link>
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2 px-2 py-2 mb-2">
+                    <FiUser className="text-gray-700" size={20} />
+                    <span className="text-gray-900 font-medium">{user.fullName}</span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 py-2 text-red-600 hover:text-red-700 font-medium w-full"
+                  >
+                    <FiLogOut size={20} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="py-2 text-gray-900 hover:text-yellow-500 font-medium" onClick={() => setMenuOpen(false)}>
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="py-2 mt-2 bg-gray-900 hover:bg-yellow-400 text-white hover:text-gray-900 font-semibold px-5 rounded-lg transition-colors text-center"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

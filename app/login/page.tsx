@@ -1,10 +1,15 @@
 "use client";
 
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { useState } from "react";
 import { FiArrowRight, FiEye, FiEyeOff } from "react-icons/fi";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { setCredentials } from "@/store/authSlice";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/store/store";
+import { Spinner } from "@/components/Spinner";
 
 // Animation variants
 const containerVariants = {
@@ -43,19 +48,41 @@ const inputFocusVariants = {
 
 export default function Login() {
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login submitted:", formData);
-    // Handle login logic here
-    router.push("/");
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/auth/login`,
+        formData
+      );
+      setSuccessMsg(response.data.message);
+      console.log("Login successful:", response.data);
+      dispatch(
+        setCredentials({ user: response.data.user, token: response.data.token })
+      );
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      setError(
+        error.response?.data?.message ||
+        "Something went wrong. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,34 +129,19 @@ export default function Login() {
       >
         {/* Header */}
         <motion.div variants={itemVariants} className="text-center mb-8">
-          <motion.h1
-            className="text-4xl font-bold text-gray-900 mb-2"
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{
-              type: "spring",
-              stiffness: 200,
-              damping: 15,
-              delay: 0.1,
-            }}
-          >
-            Welcome Back
-          </motion.h1>
-          <motion.p
-            className="text-gray-600 text-sm"
-            initial={{ y: -10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            Sign in to your account
-          </motion.p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h2>
+          <p className="text-gray-600 mb-2">
+            Sign in to your account to continue
+          </p>
         </motion.div>
 
         {/* Form Card */}
         <motion.div
           variants={itemVariants}
           className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
-          whileHover={{ boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15)" }}
+          whileHover={{
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15)",
+          }}
           transition={{ duration: 0.3 }}
         >
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -192,26 +204,51 @@ export default function Login() {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+                  {showPassword ? (
+                    <FiEyeOff size={20} />
+                  ) : (
+                    <FiEye size={20} />
+                  )}
                 </motion.button>
               </motion.div>
             </motion.div>
+
 
             {/* Forgot Password Link */}
             <motion.div variants={itemVariants} className="flex justify-end">
               <Link
                 href="/forgot-password"
                 className="text-sm text-yellow-600 hover:text-yellow-700 font-medium hover:underline"
-              >
+                >
                 Forgot password?
               </Link>
             </motion.div>
 
+                {(error || successMsg) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className={`${
+                      error
+                        ? "bg-red-50 border-2 border-red-300 text-red-800"
+                        : "bg-green-50 border-2 border-green-300 text-green-800"
+                    } px-5 py-4 rounded-xl text-sm font-medium shadow-sm`}
+                  >
+                    <div className="flex justify-center items-center gap-3">
+                      <span className="flex-1 text-xl">{error || successMsg}</span>
+                    </div>
+                  </motion.div>
+                )}
             {/* Submit Button */}
             <motion.div variants={itemVariants}>
               <motion.button
                 type="submit"
-                className="w-full bg-yellow-500 text-gray-900 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 group overflow-hidden relative hover:cursor-pointer"
+                className={`w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 group overflow-hidden relative transition-colors duration-300 ${
+                  loading 
+                    ? 'bg-gray-800 text-white cursor-wait' 
+                    : 'bg-yellow-500 text-gray-900 hover:cursor-pointer'
+                }`}
                 whileHover={{
                   scale: 1.02,
                   boxShadow: "0 10px 25px -5px rgba(234, 179, 8, 0.5)",
@@ -227,18 +264,26 @@ export default function Login() {
                   whileHover={{ x: 0 }}
                   transition={{ duration: 0.3 }}
                 />
-                <span className="relative z-10">Sign In</span>
-                <motion.span
-                  className="relative z-10"
-                  animate={{ x: [0, 5, 0] }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 1.5,
-                    ease: "easeInOut",
-                  }}
-                >
-                  <FiArrowRight size={20} />
-                </motion.span>
+                {loading ? (
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Spinner />
+                  </span>
+                ) : (
+                  <>
+                    <span className="relative z-10">Sign In</span>
+                    <motion.span
+                      className="relative z-10"
+                      animate={{ x: [0, 5, 0] }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 1.5,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <FiArrowRight size={20} />
+                    </motion.span>
+                  </>
+                )}
               </motion.button>
             </motion.div>
           </form>

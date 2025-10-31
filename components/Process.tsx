@@ -1,4 +1,4 @@
-// import "../styles/animation.css"
+
 
 export default function Process() {
     return (

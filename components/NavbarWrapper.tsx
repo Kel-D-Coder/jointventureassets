@@ -5,8 +5,7 @@ import Navbar from "./Navbar"
 
 export default function NavbarWrapper() {
     const pathname = usePathname();
-    console.log(pathname)
-    const hideNav = pathname === "/login" || pathname === "/register";
+    const hideNav = pathname === "/login" || pathname === "/register" || pathname === "/complete-profile";
 
     return !hideNav ? <Navbar /> : null;
 }
