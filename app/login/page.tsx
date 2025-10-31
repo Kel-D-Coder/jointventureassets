@@ -74,12 +74,13 @@ export default function Login() {
         setCredentials({ user: response.data.user, token: response.data.token })
       );
       router.push("/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login failed:", error);
-      setError(
-        error.response?.data?.message ||
-        "Something went wrong. Please try again."
-      );
+      if (axios.isAxiosError(error)) {
+        setError(error.response?.data?.message || "Something went wrong. Please try again.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

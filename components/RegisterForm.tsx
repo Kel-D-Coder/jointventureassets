@@ -82,9 +82,13 @@ export default function RegisterForm({ role = "Mandate", category = "" }: Regist
       dispatch(setCredentials({ user: response.data.user, token: response.data.token }));
       // Redirect to complete profile page with role and category
       router.push(`/complete-profile?role=${encodeURIComponent(formData.role)}&category=${encodeURIComponent(formData.category)}`);
-    } catch(error: any) {
+    } catch(error: unknown) {
       console.error("Registration failed:", error);
-      setError(error.response?.data?.message || "Something went wrong. Please try again later.");
+      if (axios.isAxiosError(error)) {
+        setError(error.response?.data?.message || "Something went wrong. Please try again later.");
+      } else {
+        setError("Something went wrong. Please try again later.");
+      }
     } finally {
       setLoading(false);
     }
@@ -104,7 +108,7 @@ export default function RegisterForm({ role = "Mandate", category = "" }: Regist
       role: role,
       category: category,
     });
-  }, [role, category]);
+  }, [role, category, formData]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center px-6 py-12 relative overflow-hidden">

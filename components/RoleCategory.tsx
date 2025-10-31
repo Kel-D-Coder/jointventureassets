@@ -72,7 +72,7 @@ const RoleCategory = () => {
           },
         }}
       >
-        {categories.map((category, index) => (
+        {categories.map((category) => (
           <motion.div
             key={category.id}
             variants={{

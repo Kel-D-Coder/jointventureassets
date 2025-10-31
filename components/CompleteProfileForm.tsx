@@ -107,9 +107,13 @@ export default function CompleteProfileForm({
       setSuccessMsg(response.data.message);
       console.log("Profile completion successful:", response.data);
       router.push("/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Profile completion failed:", error);
-      setError(error.response.data.message);
+      if (axios.isAxiosError(error)) {
+        setError(error.response?.data?.message || "Something went wrong. Please try again.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
