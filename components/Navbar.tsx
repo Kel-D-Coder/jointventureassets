@@ -2,26 +2,33 @@
 
 import Link from "next/link";
 import { FiMenu, FiX, FiUser, FiLogOut } from "react-icons/fi";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/store/store";
 import { logout } from "@/store/authSlice";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { isTokenExpired } from "@/utils/decodeToken";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { user, isAuthenticated, token } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
   const handleLogout = () => {
     dispatch(logout());
-    localStorage.removeItem("userId");
     router.push("/");
     setUserMenuOpen(false);
   };
+
+  useEffect(() => {
+    if (!token || isTokenExpired(token)) {
+      dispatch(logout());
+      router.push("/login");
+    }
+  }, [token])
 
   return (
     <nav className="w-full bg-white shadow flex items-center px-4 sm:px-8 py-3 relative">
