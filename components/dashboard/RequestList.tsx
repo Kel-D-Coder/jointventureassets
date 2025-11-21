@@ -19,18 +19,18 @@ interface RequestListProps {
 }
 
 export default function RequestList({ requests, onViewDetails }: RequestListProps) {
-  const getStatusIcon = (status: RequestStatus) => {
-    switch (status) {
-      case 'pending':
-        return <FiClock className="text-yellow-500" />
-      case 'accepted':
-        return <FiCheckCircle className="text-green-500" />
-      case 'rejected':
-        return <FiXCircle className="text-red-500" />
-      default:
-        return <FiClock className="text-gray-400" />
-    }
-  }
+  // const getStatusIcon = (status: RequestStatus) => {
+  //   switch (status) {
+  //     case 'pending':
+  //       return <FiClock className="text-yellow-500" />
+  //     case 'accepted':
+  //       return <FiCheckCircle className="text-green-500" />
+  //     case 'rejected':
+  //       return <FiXCircle className="text-red-500" />
+  //     default:
+  //       return <FiClock className="text-gray-400" />
+  //   }
+  // }
 
   // const getStatusText = (status: RequestStatus) => {
   //   return status.charAt(0).toUpperCase() + status.slice(1)

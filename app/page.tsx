@@ -11,10 +11,23 @@ import banner2 from "../assets/IMG-20251018-WA0010.jpg";
 import { useState } from "react";
 import axios from "axios";
 
+interface IRequest {
+  _id: string;
+  title: string;
+  description: string;
+  budget: number;
+  location: string;
+  timeline: string;
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  createdAt: string;
+}
+
 export default function Home() {
   const [listingType, setListingType] = useState('Sell');
   const [searchText, setSearchText] = useState('');
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<IRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,10 +52,14 @@ export default function Home() {
       console.log(response.data.results)
 
       setResults(response.data.results);
-    } catch (err: any) {
-      const message =
-        err.response?.data?.message || err.message || 'An error occurred while searching.';
-      setError(message);
+      setLoading(false);
+    } catch (err: unknown) {
+      setLoading(false);
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || 'An error occurred while searching.');
+      } else {
+        setError('An error occurred while searching.');
+      }
     } finally {
       setLoading(false);
     }
@@ -173,7 +190,7 @@ export default function Home() {
               Search results
             </h2>
             <ul className="space-y-3">
-              {results.map((request: any) => (
+              {results.map((request) => (
                 <motion.div
                   key={request._id}
                   initial={{ opacity: 0, y: 20 }}

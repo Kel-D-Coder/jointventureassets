@@ -85,6 +85,8 @@ export default function Login() {
 
       router.push("/dashboard");
     } catch (error: unknown) {
+      setLoading(false);
+      setSuccessMsg("")
       console.error("Login failed:", error);
       if (axios.isAxiosError(error)) {
         setError(error.response?.data?.message || "Something went wrong. Please try again.");
@@ -117,6 +119,7 @@ export default function Login() {
       // console.log(resonse.data)
     } catch (error: unknown) {
       setLoading(false)
+      setSuccessMsg("")
       if (axios.isAxiosError(error)) {
         setError(error.response?.data?.message || "Something went wrong. Please try again.");
       } else {

@@ -6,7 +6,7 @@ import { motion } from "framer-motion"
 import axios from "axios"
 import { useSelector } from "react-redux"
 import { RootState } from "@/store/store"
-import { FiArrowLeft, FiLoader } from "react-icons/fi"
+import { FiArrowLeft } from "react-icons/fi"
 import { Spinner } from "@/components/Spinner"
 
 interface Request {

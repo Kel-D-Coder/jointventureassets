@@ -106,6 +106,7 @@ export default function Dashboard() {
       getUser()
       fetchRequests()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, router, token, user])
 
   if (!isAuthenticated || !user) {

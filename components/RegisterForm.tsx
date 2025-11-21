@@ -10,6 +10,9 @@ import { Spinner } from "./Spinner";
 import { AppDispatch } from "@/store/store";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "@/store/authSlice";
+import Image from "next/image";
+
+import googleLogo from "@/assets/google.svg"
 
 // Animation variants
 const containerVariants = {
@@ -108,6 +111,8 @@ export default function RegisterForm({ role = "Mandate", category = "" }: Regist
       role: role,
       category: category,
     });
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -394,8 +399,8 @@ export default function RegisterForm({ role = "Mandate", category = "" }: Regist
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
             >
-              <img
-                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+              <Image
+                src={googleLogo}
                 alt="Google"
                 className="w-5 h-5"
               />

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { FiArrowLeft, FiLock } from "react-icons/fi";
+import { FiArrowLeft } from "react-icons/fi";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Spinner } from "@/components/Spinner";
@@ -39,7 +39,7 @@ export default function VerifyOtp() {
   const [otp, setOtp] = useState(Array(6).fill(""));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  // const [success, setSuccess] = useState<string | null>(null);
 
   const handleOtpChange = (index: number, value: string) => {
     if (value && !/^\d*$/.test(value)) return;
@@ -82,8 +82,6 @@ export default function VerifyOtp() {
         email,
         otp: otpCode 
       });
-
-      setSuccess(response.data.message)
       
       // If OTP is valid, redirect to reset password page
       router.push(`/reset-password?email=${encodeURIComponent(email)}`);

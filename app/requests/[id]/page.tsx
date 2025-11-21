@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { FiArrowLeft, FiClock, FiCheckCircle, FiXCircle, FiEdit, FiTrash2, FiLoader } from "react-icons/fi"
+import { FiArrowLeft, FiClock, FiCheckCircle, FiXCircle, FiEdit, FiTrash2 } from "react-icons/fi"
 import { useSelector } from "react-redux"
 import { RootState } from "@/store/store"
 import axios from "axios"
@@ -27,13 +27,12 @@ export default function RequestDetails() {
   const [request, setRequest] = useState<Request | null>(null)
   const [isDeleteLoading, setIsDeleteLoading] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [success, setSuccess ] = useState("")
+  // const [success, setSuccess ] = useState("")
   const [error, setError] = useState<string | null>(null)
   const { token } = useSelector((state: RootState) => state.auth)
 
   const handleDeleteRequest = async () => {
     try {
-      setSuccess("")
       setError("")
       setIsDeleteLoading(true)
       const response = await axios.delete(`${process.env.NEXT_PUBLIC_SERVER_URL}/request/delete`, {
@@ -43,12 +42,10 @@ export default function RequestDetails() {
       })
       setIsDeleteLoading(false)
       setError("")
-      setSuccess(response.data.message)
       router.back()
 
     } catch (error: unknown) {
       setIsDeleteLoading(false)
-      setSuccess("")
       if (axios.isAxiosError(error)) {
         setError(error.response?.data?.message || "Something went wrong. Please try again.")
         console.log(error)

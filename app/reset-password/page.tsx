@@ -36,8 +36,6 @@ export default function ResetPassword() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email') || '';
-  console.log(email)
-  const token = searchParams.get('token') || '';
   
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

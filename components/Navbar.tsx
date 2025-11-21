@@ -29,6 +29,7 @@ export default function Navbar() {
       dispatch(logout());
       // router.push("/login");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
 
   return (

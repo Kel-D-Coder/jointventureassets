@@ -28,6 +28,7 @@ export default function BrowseRequests() {
   // Fetch all requests initially
   useEffect(() => {
     searchRequests();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Refetch whenever filter changes
@@ -46,6 +47,7 @@ export default function BrowseRequests() {
 
       searchRequests(mappedType);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory]);
 
   const categories = ["All", "Land", "Development", "Partnership"];
