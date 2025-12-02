@@ -159,14 +159,16 @@ export default function Navbar() {
             className="fixed inset-0 z-50 bg-white shadow-lg flex flex-col px-4 py-4"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="bg-gray-900 text-white rounded-lg px-3 py-2 font-bold text-sm">
-                  JVA
-                </div>
-                <span className="font-bold text-gray-900 text-lg">
-                  Joint Venture Assets
-                </span>
-              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+        <Image 
+          src={Logo} 
+          alt="logo" 
+          width={80} 
+          // height={20}
+          className="h-full w-[100px] object-contain hover:cursor-pointer"  
+          onClick={() => router.push("/")}
+        />
+      </div>
               <button
                 className="text-gray-900 text-2xl"
                 aria-label="Close menu"
