@@ -124,7 +124,7 @@ export default function Process() {
               </ul>
             </div>
             <div className="flex-1">
-              <div className="bg-yellow-100 rounded-xl p-6 shadow flex flex-col gap-2">
+              {/* <div className="bg-yellow-100 rounded-xl p-6 shadow flex flex-col gap-2">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="bg-yellow-500 rounded-lg p-2 text-white font-bold">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
@@ -137,7 +137,7 @@ export default function Process() {
                 <p className="text-gray-700 text-sm">
                   Our algorithm considers entity type, group preferences, budget alignment, project scale, and partnership structure for optimal matches.
                 </p>
-              </div>
+              </div> */}
               <div className="bg-gray-100 rounded-xl p-6 shadow mt-6">
                 <h4 className="font-bold text-gray-900 mb-2">Ongoing Support</h4>
                 <p className="text-gray-700 text-sm">
@@ -172,7 +172,7 @@ export default function Process() {
               </ul>
             </div>
             <div className="flex-1">
-              <div className="bg-yellow-100 rounded-xl p-6 shadow flex flex-col gap-2">
+              {/* <div className="bg-yellow-100 rounded-xl p-6 shadow flex flex-col gap-2">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="bg-yellow-500 rounded-lg p-2 text-white font-bold">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
@@ -185,7 +185,7 @@ export default function Process() {
                 <p className="text-gray-700 text-sm">
                   Our algorithm considers entity type, group preferences, budget alignment, project scale, and partnership structure for optimal matches.
                 </p>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

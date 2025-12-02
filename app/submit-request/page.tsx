@@ -670,7 +670,9 @@ export default function SubmitRequestPage() {
                   </label>
                   <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl">
                     <div className="space-y-1 text-center">
-                      <FiUpload className="mx-auto h-12 w-12 text-gray-400" />
+                      <label htmlFor="file-upload">
+                        <FiUpload className="mx-auto h-12 w-12 text-gray-400 hover:cursor-pointer"/>
+                      </label>
                       <div className="flex text-sm text-gray-600 justify-center">
                         <label
                           htmlFor="file-upload"

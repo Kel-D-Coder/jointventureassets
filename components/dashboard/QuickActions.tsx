@@ -19,7 +19,7 @@ const actions = [
     description: "Find new partnership opportunities",
     color: "bg-green-500",
     hoverColor: "hover:bg-green-600",
-    href: "/browse-opportunities",
+    href: "/browse-requests",
   },
   {
     icon: <FiCalendar size={24} />,
@@ -27,7 +27,7 @@ const actions = [
     description: "Schedule a meeting with partners",
     color: "bg-purple-500",
     hoverColor: "hover:bg-purple-600",
-    href: "/book-consultation",
+    href: "contact",
   },
 ]
 
@@ -52,7 +52,7 @@ export default function QuickActions() {
             transition={{ delay: 0.7 + index * 0.1 }}
             whileHover={{ scale: 1.05, y: -5 }}
             whileTap={{ scale: 0.95 }}
-            className={`${action.color} ${action.hoverColor} text-white p-6 rounded-xl transition-all duration-300 text-left group relative overflow-hidden`}
+            className={`${action.color} ${action.hoverColor} text-white p-6 rounded-xl transition-all duration-300 text-left group relative overflow-hidden hover:cursor-pointer`}
           >
             {/* Animated background */}
             <motion.div

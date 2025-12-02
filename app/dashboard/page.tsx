@@ -13,6 +13,9 @@ import RequestList from "@/components/dashboard/RequestList"
 import QuickActions from "@/components/dashboard/QuickActions"
 import axios from "axios"
 
+import { setCredentials } from "@/store/authSlice"
+import { useUser } from "@clerk/nextjs"
+
 interface UserStats {
   totalRequest: number
   matched: number
@@ -61,7 +64,6 @@ export default function Dashboard() {
 
   // Fetch user requests
   const fetchRequests = async () => {
-    console.log("fetching....")
     try {
       setIsLoading(true)
       const response = await axios.get(`${process.env.NEXT_PUBLIC_SERVER_URL}/request/getUserRequests`, {
@@ -69,7 +71,6 @@ export default function Dashboard() {
           Authorization: `Bearer ${token}`
         }
       })
-      console.log(response.data)
       setRequests(response.data.data)
       setIsLoading(false)
     } catch (error) {

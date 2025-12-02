@@ -8,8 +8,10 @@ import WhyJVA from "@/components/WhyJVA";
 import { motion } from "framer-motion";
 
 import banner2 from "../assets/IMG-20251018-WA0010.jpg";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
+
+import { useUser } from "@clerk/nextjs"
 
 interface IRequest {
   _id: string;
@@ -76,7 +78,7 @@ export default function Home() {
         type: listingType.toLowerCase(),
       });
 
-      console.log(response.data.results)
+      // console.log(response.data.results)
 
       setResults(response.data.results);
       setLoading(false);
@@ -92,7 +94,11 @@ export default function Home() {
     }
   };
 
-
+  useEffect(() => {
+    
+      
+    
+  }, [])
   return (
     <>
       <div className="w-full">

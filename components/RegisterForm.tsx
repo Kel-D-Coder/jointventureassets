@@ -171,7 +171,7 @@ export default function RegisterForm({ role = "Mandate", category = "" }: Regist
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            Registering as a{" "}
+            Registering as {role === "Investor" ? "an" : "a"}{" "}
             <span className="font-semibold text-gray-900">{role}</span>
           </motion.p>
         </motion.div>

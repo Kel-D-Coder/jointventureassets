@@ -4,6 +4,10 @@ import "./globals.css";
 import NavbarWrapper from "@/components/NavbarWrapper";
 import FooterWrapper from "@/components/FooterWrapper";
 import StoreProvider from "@/store/StoreProvider";
+import WhatsAppButton from "@/components/WhatsAppButton";
+
+import { ClerkProvider } from "@clerk/nextjs"
+import ClerkReduxSync from "@/components/ClerkReduxSync";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -27,11 +31,15 @@ export default function RootLayout({
       <body
         className={`${inter.variable} antialiased`}
       >
-        <StoreProvider>
-          <NavbarWrapper />
-          {children}
-          <FooterWrapper />
-        </StoreProvider>
+        <ClerkProvider>
+          <StoreProvider>
+          <ClerkReduxSync />
+            <NavbarWrapper />
+            {children}
+            <FooterWrapper />
+            <WhatsAppButton />
+          </StoreProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

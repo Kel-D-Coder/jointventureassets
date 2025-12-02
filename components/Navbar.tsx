@@ -9,6 +9,7 @@ import { logout } from "@/store/authSlice";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { isTokenExpired } from "@/utils/decodeToken";
+import { useClerk } from "@clerk/nextjs";
 
 import Logo from "@/assets/logo/Untitled design.png"
 import Image from "next/image";
@@ -20,9 +21,13 @@ export default function Navbar() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const pathname = usePathname();
+  const { signOut } = useClerk()
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     dispatch(logout());
+    await signOut({
+      redirectUrl: "/",
+    })
     router.push("/");
     setUserMenuOpen(false);
   };
@@ -43,8 +48,9 @@ export default function Navbar() {
           src={Logo} 
           alt="logo" 
           width={80} 
-          height={20}
-          className="h-full w-auto object-contain" 
+          // height={20}
+          className="h-full w-[100px] object-contain hover:cursor-pointer"  
+          onClick={() => router.push("/")}
         />
       </div>
       {/* Centered Navigation Links */}

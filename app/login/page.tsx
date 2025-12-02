@@ -10,10 +10,8 @@ import { setCredentials } from "@/store/authSlice";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/store/store";
 import { Spinner } from "@/components/Spinner";
-import { signInWithGoogle } from "@/utils/oauth";
 
-import googleLogo from "@/assets/google.svg"
-import Image from "next/image";
+import { GoogleButton } from "@/components/GoogleBtn";
 
 // Animation variants
 const containerVariants = {
@@ -73,7 +71,6 @@ export default function Login() {
         formData
       );
       setSuccessMsg(response.data.message);
-      console.log("Login successful:", response.data);
 
       dispatch(
         setCredentials({ user: response.data.user, token: response.data.token })
@@ -311,30 +308,7 @@ export default function Login() {
           </form>
 
           {/* Google Sign In */}
-          <motion.div
-            variants={itemVariants}
-            className="mt-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.75 }}
-          >
-            <motion.button
-              onClick={handleOAuth}
-              className="w-full flex items-center justify-center gap-3 py-3 px-6 border border-gray-300 bg-white rounded-lg shadow-sm hover:bg-gray-50 transition-all cursor-pointer"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              <Image
-                src={googleLogo}
-                alt="Google"
-                className="w-5 h-5"
-              />
-              <span className="text-gray-700 font-medium">
-                Continue with Google
-              </span>
-            </motion.button>
-          </motion.div>
-
+          <GoogleButton />
           {/* Sign Up Link */}
           <motion.div
             variants={itemVariants}
