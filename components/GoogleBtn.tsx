@@ -28,7 +28,7 @@ export function GoogleButton() {
     await signIn?.authenticateWithRedirect?.({
       strategy: "oauth_google",
       redirectUrl: "/sso-callback",
-      redirectUrlComplete: "/",
+      redirectUrlComplete: "/dashboard",
     });
   }
 
