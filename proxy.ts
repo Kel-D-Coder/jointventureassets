@@ -1,24 +1,12 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { clerkMiddleware } from '@clerk/nextjs/server'
 
-const publicRoutes = createRouteMatcher([
-  '/sso-callback(.*)',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/',            // home, etc.
-  // add any other public routes
-])
-
-export default clerkMiddleware(async (_auth, req) => {
-  if (publicRoutes(req)) {
-    return  // allow public access
-  }
-  // Otherwise, protect or do nothing (depending on your needs)
-  // e.g. await auth().protect()  or just let middleware run
-})
+export default clerkMiddleware()
 
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|…extensions…)).*)',
+    // Skip Next.js internals and all static files, unless found in search params
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
     '/(api|trpc)(.*)',
   ],
 }
