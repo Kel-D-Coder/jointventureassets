@@ -8,6 +8,7 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 
 import { ClerkProvider } from "@clerk/nextjs"
 import ClerkReduxSync from "@/components/ClerkReduxSync";
+import CookieConsentBanner from "@/components/CookieConsentBanner";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -36,6 +37,7 @@ export default function RootLayout({
           <ClerkReduxSync />
             <NavbarWrapper />
             {children}
+            <CookieConsentBanner />
             <FooterWrapper />
             <WhatsAppButton />
           </StoreProvider>
