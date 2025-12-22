@@ -1,14 +1,13 @@
 "use client"
 
 import axios from 'axios';
-import { FiUsers, FiClock, FiCheckCircle, FiXCircle, FiPlus } from 'react-icons/fi';
+import { FiUsers, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { useEffect, useState } from 'react';
 import { useAppSelector } from '@/hooks/hooks';
 import { Spinner } from '@/components/Spinner';
 import { ContentCard } from '@/components/admin/ContentCard';
 import { StatCard } from '@/components/admin/StatCard';
 import { RequestItem } from '@/components/admin/RequestItem';
-import EmptyState from '@/components/dashboard/EmptyState';
 
 const getInitials = (fullName: string): string => {
   return fullName
@@ -32,8 +31,8 @@ const UserItem = ({ name, role, initials }: { name: string; role: string; initia
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
-  const [requestError, setRequestError] = useState(null);
-  const [userError, setUserError] = useState(null);
+  // const [requestError, setRequestError] = useState(null);
+  // const [userError, setUserError] = useState(null);
   const [requests, setRequests] = useState([]);
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -105,6 +104,8 @@ export default function AdminDashboard() {
     getRequests();
     getAllUsers();
     getApprovedRequests();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
