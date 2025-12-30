@@ -112,7 +112,7 @@ export default function Dashboard() {
   }
 
   const stats = {
-    myRequests: requests.length || 0,
+    myRequests: requests?.length || 0,
     active: currentUser?.matched || 0,
     matched: currentUser?.matched,
     availableMatches: currentUser?.availableMatches || 0,

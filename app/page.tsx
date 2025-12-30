@@ -2,9 +2,8 @@ import HomeClient from "@/components/HomeClient";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Joint Venture Assets - Connect Landowners & Investors for Profitable Real Estate Ventures",
-  description: "Connect landowners, individual & group investors, cooperatives, government entities, and mandates for profitable real estate joint ventures. We manage the process, you reap the rewards.",
-  keywords: ["Joint Venture Assets", "JVA", "real estate joint ventures", "landowners", "investors", "property development", "land investment", "real estate"],
+  title: "Joint Venture Assets | Real Estate Joint Venture Platform",
+  description: "Joint Venture Assets connects landowners, investors, cooperatives, and government entities for profitable real estate joint ventures and property development across Nigeria.",
   robots: {
     index: true,
     follow: true,
@@ -13,8 +12,11 @@ export const metadata: Metadata = {
       index: true,
       follow: true,
       "max-snippet": -1,
-    }
-  }
+    },
+  },
+  alternates: {
+    canonical: "https://www.jointventureassets.com/",
+  },
 };
 
 export default function Home() {

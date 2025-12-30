@@ -37,14 +37,19 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [approvedRequests, setApprovedRequests] = useState([]);
+  const [approvedRequestsLoading, setApprovedRequestsLoading] = useState(true);
+  const [rejectedRequests, setRejectedRequests] = useState([]);
+  const [rejectedRequestsLoading, setRejectedRequestsLoading] = useState(true);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [pendingRequestsLoading, setPendingRequestsLoading] = useState(true);
   const {token} = useAppSelector((state) => state.auth)
 
 
   const stats = [
-    { title: 'Total Users', value: '1,234', icon: FiUsers },
-    { title: 'Pending Requests', value: '42', icon: FiClock },
-    { title: 'Approved Requests', value: approvedRequests.length.toString(), icon: FiCheckCircle },
-    { title: 'Rejected Requests', value: '23', icon: FiXCircle },
+    { title: 'Total Users', value: usersLoading ? '...' : users.length.toString(), icon: FiUsers },
+    { title: 'Pending Requests', value: pendingRequestsLoading ? '...' : pendingRequests.length.toString(), icon: FiClock },
+    { title: 'Approved Requests', value: approvedRequestsLoading ? '...' : approvedRequests.length.toString(), icon: FiCheckCircle },
+    { title: 'Rejected Requests', value: rejectedRequestsLoading ? '...' : rejectedRequests.length.toString(), icon: FiXCircle },
   ];
 
   const getRequests = async () => {
@@ -67,19 +72,56 @@ export default function AdminDashboard() {
 
    const getApprovedRequests = async () => {
       try {
-        setLoading(true);
+        setApprovedRequestsLoading(true);
         const response = await axios.get(`${process.env.NEXT_PUBLIC_SERVER_URL}/admin/requests/accepted`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
-        setLoading(false);
         setApprovedRequests(response.data);
         console.log(response.data);
       } catch (error) {
         if (axios.isAxiosError(error)) {
           console.log('Error fetching approved requests:', error.response?.data || error.message);
         }
+      } finally {
+        setApprovedRequestsLoading(false);
+      }
+    }
+
+   const getRejectedRequests = async () => {
+      try {
+        setRejectedRequestsLoading(true);
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_SERVER_URL}/admin/requests/rejected`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        setRejectedRequests(response.data);
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          console.log('Error fetching rejected requests:', error.response?.data || error.message);
+        }
+      } finally {
+        setRejectedRequestsLoading(false);
+      }
+    }
+
+   const getPendingRequests = async () => {
+      try {
+        setPendingRequestsLoading(true);
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_SERVER_URL}/admin/requests/pending`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        setPendingRequests(response.data);
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          console.log('Error fetching pending requests:', error.response?.data || error.message);
+        }
+      } finally {
+        setPendingRequestsLoading(false);
       }
     }
 
@@ -100,10 +142,18 @@ export default function AdminDashboard() {
     }
   }
 
+  const refreshData = async () => {
+    await Promise.all([
+      getRequests(),
+      getAllUsers(),
+      getApprovedRequests(),
+      getRejectedRequests(),
+      getPendingRequests()
+    ]);
+  };
+
   useEffect(() => {
-    getRequests();
-    getAllUsers();
-    getApprovedRequests();
+    refreshData();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

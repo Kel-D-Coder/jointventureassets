@@ -35,9 +35,9 @@ export default function HomeClient() {
     const [error, setError] = useState<string | null>(null);
 
     const [text] = useTypewriter({
-        words: ["Innovation", "Capital & Vision" ],
-        loop: 1,
-        delaySpeed: 100,
+      words: ["Innovation", "Capital & Vision" ],
+      loop: 1,
+      delaySpeed: 100,
     });
 
     const getStatusIcon = (status: string) => {
@@ -95,11 +95,14 @@ export default function HomeClient() {
 
   return (
     <div className="w-full">
-        {/* Hero Section with background image */}
-        <section className="relative w-full min-h-[72vh] flex items-center justify-center overflow-hidden">
-          <Image
-            src={banner2}
-            alt="Hero background"
+      <h1 className="sr-only">
+        Joint Venture Assets – Real Estate Joint Venture Platform
+      </h1>
+      {/* Hero Section with background image */}
+      <section className="relative w-full min-h-[72vh] flex items-center justify-center overflow-hidden">
+        <Image
+          src={banner2}
+          alt="Hero background"
             fill
             className="object-cover w-full h-full"
             priority

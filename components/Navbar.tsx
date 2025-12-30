@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link";
-import { FiMenu, FiX, FiUser, FiLogOut } from "react-icons/fi";
+import { FiMenu, FiX, FiUser, FiLogOut, FiSettings } from "react-icons/fi";
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/store/store";
@@ -116,6 +116,18 @@ export default function Navbar() {
                     <FiUser size={16} />
                     <span>Dashboard</span>
                   </Link>
+                  {
+                    user.role === 'Admin' && (
+                      <Link
+                        href="/admin"
+                        className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 transition-colors text-gray-700"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <FiSettings size={16} />
+                        <span>Admin Panel</span>
+                      </Link>
+                    )
+                  }
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 transition-colors text-red-600 w-full"

@@ -49,7 +49,7 @@ export default function Contact() {
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900">Phone</div>
-                  <div className="text-gray-700 text-sm">+234 803 123 4567<br />+234 701 234 5678</div>
+                  <div className="text-gray-700 text-sm">+234 8140431570<br />+234 9063665415</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -71,7 +71,7 @@ export default function Contact() {
                 <div>
                   <div className="font-semibold text-gray-900">Office</div>
                   <div className="text-gray-700 text-sm">
-                    123 Victoria Island,<br />Lagos, Nigeria
+                    No 2 off Surulere Street,<br />Dopemu, Lagos, Nigeria
                   </div>
                 </div>
               </div>
@@ -82,8 +82,8 @@ export default function Contact() {
                 <div>
                   <div className="font-semibold text-gray-900">Business Hours</div>
                   <div className="text-gray-700 text-sm">
-                    Monday - Friday: 9:00 AM - 6:00 PM<br />
-                    Saturday: 10:00 AM - 4:00 PM<br />
+                    Monday - Friday: 8:00 AM - 5:00 PM<br />
+                    Saturday: 10:00 AM - 2:00 PM<br />
                     Sunday: Closed
                   </div>
                 </div>
