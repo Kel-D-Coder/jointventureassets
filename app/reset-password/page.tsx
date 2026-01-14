@@ -235,10 +235,10 @@ export default function ResetPassword() {
             <motion.div variants={itemVariants} className="pt-2">
               <button
                 type="submit"
-                disabled={loading || !password || !confirmPassword || password !== confirmPassword || password.length < 8}
-                className={`w-full flex justify-center py-3 px-4 border border-yellow-500 rounded-xl shadow-sm text-sm font-medium 
-                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 
-                transition-colors duration-200 disabled:opacity-70
+                disabled={loading}
+                className={`w-full flex justify-center py-3 px-4 border border-yellow-800 rounded-xl shadow-sm text-sm font-medium 
+                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-600 
+                transition-colors duration-200 disabled:opacity-70 text-white
                 ${loading 
                   ? 'bg-gray-800 text-white cursor-wait' 
                   : 'bg-yellow-500 text-gray-900 hover:bg-yellow-400 cursor-pointer'

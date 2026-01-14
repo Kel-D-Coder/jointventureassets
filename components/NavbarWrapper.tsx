@@ -9,9 +9,9 @@ export default function NavbarWrapper() {
         pathname === "/login" || 
         pathname === "/register" || 
         pathname === "/complete-profile" || 
-        pathname === "/forgot-password" || 
-        pathname === "/forgot-password/verify-otp" || 
-        pathname.startsWith("/admin");
+        pathname.startsWith("/admin") ||
+        pathname.startsWith("/forgot-password") ||
+        pathname.startsWith("/reset-password");
 
     return !hideNav ? <Navbar /> : null;
 }
