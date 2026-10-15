@@ -33,8 +33,8 @@ export interface InboxEnquiry {
 export interface JvEnquiryTerms {
   /** Whether they want JVA to prepare their Letter of Intent when they move forward. */
   generateLoi: boolean;
-  /** Required when generateLoi is true, so the LOI can be written on their behalf. */
-  companyProfile?: SubmittedDocument;
+  /** Their company letterhead (PNG or JPG). Required when generateLoi is true: the LOI is printed on it. */
+  letterhead?: SubmittedDocument;
   /** They agreed that JVA prepares the Facilitation Fee Agreement at 10% of the land value, non-negotiable. */
   acceptedFeeTerms: true;
 }

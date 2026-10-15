@@ -41,8 +41,8 @@ export async function POST(request: Request) {
     if (body.jv && body.jv.acceptedFeeTerms !== true) {
       return json({ message: "Please accept the facilitation fee terms to send your enquiry." }, 400);
     }
-    if (body.jv?.generateLoi && !body.jv.companyProfile) {
-      return json({ message: "Please upload your company profile so we can prepare your LOI." }, 400);
+    if (body.jv?.generateLoi && !body.jv.letterhead?.type.startsWith("image/")) {
+      return json({ message: "Please upload your company letterhead (PNG or JPG) so we can prepare your LOI." }, 400);
     }
     const item: InboxItem = { ...body, id: id("enq"), status: "new", createdAt: now };
     return json(await addItem(item), 201);

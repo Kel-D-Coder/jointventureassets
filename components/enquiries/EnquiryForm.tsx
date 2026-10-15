@@ -36,9 +36,9 @@ export function EnquiryForm({
     message: defaultMessage,
   });
   const [generateLoi, setGenerateLoi] = useState<"" | "yes" | "no">("");
-  const [companyProfile, setCompanyProfile] = useState<SubmittedDocument>();
+  const [letterhead, setLetterhead] = useState<SubmittedDocument>();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [jvErrors, setJvErrors] = useState<{ generateLoi?: string; companyProfile?: string }>({});
+  const [jvErrors, setJvErrors] = useState<{ generateLoi?: string; letterhead?: string }>({});
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
@@ -52,10 +52,10 @@ export function EnquiryForm({
     if (jointVenture) {
       const problems = {
         generateLoi: generateLoi ? undefined : "Choose yes or no.",
-        companyProfile: generateLoi === "yes" && !companyProfile ? "Upload your company profile so we can prepare your LOI." : undefined,
+        letterhead: generateLoi === "yes" && !letterhead ? "Upload your company letterhead so we can prepare your LOI on it." : undefined,
       };
       setJvErrors(problems);
-      if (problems.generateLoi || problems.companyProfile || !acceptedTerms) return;
+      if (problems.generateLoi || problems.letterhead || !acceptedTerms) return;
     }
     setSending(true);
     try {
@@ -63,7 +63,7 @@ export function EnquiryForm({
         ...form,
         target,
         jv: jointVenture
-          ? { generateLoi: generateLoi === "yes", companyProfile: generateLoi === "yes" ? companyProfile : undefined, acceptedFeeTerms: true }
+          ? { generateLoi: generateLoi === "yes", letterhead: generateLoi === "yes" ? letterhead : undefined, acceptedFeeTerms: true }
           : undefined,
       });
       setSent(true);
@@ -140,16 +140,17 @@ export function EnquiryForm({
             {generateLoi === "yes" ? (
               <div className="mt-4">
                 <DocumentUpload
-                  id="enquiryCompanyProfile"
-                  label="Company profile"
-                  description="We use it to prepare the LOI on your company's behalf. PDF or image."
+                  id="enquiryLetterhead"
+                  label="Company letterhead"
+                  description="We print your LOI on it. Upload the top of your letterhead as an image."
                   required
-                  value={companyProfile}
+                  imagesOnly
+                  value={letterhead}
                   onChange={(doc) => {
-                    setCompanyProfile(doc);
+                    setLetterhead(doc);
                     setJvErrors({});
                   }}
-                  error={jvErrors.companyProfile}
+                  error={jvErrors.letterhead}
                 />
               </div>
             ) : null}

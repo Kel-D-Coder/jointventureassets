@@ -37,7 +37,8 @@ function upgrade(items: InboxItem[]): { items: InboxItem[]; changed: boolean } {
   for (const seed of seedInbox) {
     if (seed.kind !== "enquiry" || !seed.jv) continue;
     const item = items.find((candidate) => candidate.id === seed.id);
-    if (item?.kind === "enquiry" && !item.jv) {
+    // Also replaces the sample company profiles saved before letterheads were asked for.
+    if (item?.kind === "enquiry" && (!item.jv || (seed.jv.letterhead && !item.jv.letterhead))) {
       item.jv = structuredClone(seed.jv);
       changed = true;
     }

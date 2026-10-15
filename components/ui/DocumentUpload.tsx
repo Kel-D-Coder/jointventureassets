@@ -15,6 +15,7 @@ export function DocumentUpload({
   value,
   onChange,
   error,
+  imagesOnly = false,
 }: {
   id: string;
   label: string;
@@ -23,6 +24,8 @@ export function DocumentUpload({
   value?: SubmittedDocument;
   onChange: (doc: SubmittedDocument | undefined) => void;
   error?: string;
+  /** Accept only PNG or JPG, e.g. a letterhead that gets printed on a document. */
+  imagesOnly?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState("");
@@ -31,6 +34,11 @@ export function DocumentUpload({
   const choose = async (file?: File) => {
     if (!file) return;
     setProblem("");
+    if (imagesOnly && !(file.type === "image/png" || file.type === "image/jpeg")) {
+      setProblem(`${file.name} isn't a PNG or JPG image.`);
+      if (input.current) input.current.value = "";
+      return;
+    }
     setReading(true);
     try {
       onChange(await toDocument(file));
@@ -65,7 +73,7 @@ export function DocumentUpload({
           ) : (
             <>
               <p className="text-sm text-ink">{description}</p>
-              <p className="text-xs text-muted">PDF, JPG or PNG, up to {MAX_DOCUMENT_MB} MB</p>
+              <p className="text-xs text-muted">{imagesOnly ? "PNG or JPG" : "PDF, JPG or PNG"}, up to {MAX_DOCUMENT_MB} MB</p>
             </>
           )}
         </div>
@@ -90,7 +98,7 @@ export function DocumentUpload({
             </button>
           ) : null}
         </div>
-        <input id={id} ref={input} type="file" accept="application/pdf,image/*" hidden onChange={(event) => choose(event.target.files?.[0])} />
+        <input id={id} ref={input} type="file" accept={imagesOnly ? "image/png,image/jpeg" : "application/pdf,image/*"} hidden onChange={(event) => choose(event.target.files?.[0])} />
       </div>
       {message ? <p className="mt-1.5 text-xs font-medium text-red-700">{message}</p> : null}
     </div>
