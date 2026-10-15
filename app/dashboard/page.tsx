@@ -1,17 +1,24 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { FiPlus, FiTrendingUp, FiEye} from "react-icons/fi"
-import { useSelector } from "react-redux"
-import { RootState } from "@/store/store"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useSelector } from "react-redux"
+import { FiCheckCircle, FiCompass, FiFileText, FiHome, FiPlus } from "react-icons/fi"
+import { RootState } from "@/store/store"
+import { getMyAccount, getUserStats } from "@/lib/api/auth"
+import { getMyRequests } from "@/lib/api/requests"
+import { getListings } from "@/lib/api/listings"
+import { getMySubmissions } from "@/lib/api/inbox"
+import SubmissionList from "@/components/dashboard/SubmissionList"
+import type { ListingSubmission, MemberAccount } from "@/lib/inbox/types"
 import StatCard from "@/components/dashboard/StatCard"
 import SectionCard from "@/components/dashboard/SectionCard"
 import EmptyState from "@/components/dashboard/EmptyState"
 import RequestList from "@/components/dashboard/RequestList"
 import QuickActions from "@/components/dashboard/QuickActions"
-import axios from "axios"
+import { ListingCard, ListingCardSkeleton } from "@/components/listings/ListingCard"
+import type { Listing, PartnerRequest } from "@/types"
 
 interface UserStats {
   totalRequest: number
@@ -19,249 +26,164 @@ interface UserStats {
   availableMatches: number
 }
 
-interface Request {
-  _id: string
-  title: string
-  description: string
-  status: 'pending' | 'accepted' | 'rejected'
-  createdAt: string
-}
-
-// Animation variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-}
-
-const headerVariants = {
-  hidden: { opacity: 0, y: -20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 100,
-      damping: 15,
-    },
-  },
+/** Listings that suit the member's role: JV land for developers and investors, everything else otherwise. */
+function recommendedFor(role: string, listings: Listing[]): Listing[] {
+  const preferred = role === "Investor" ? listings.filter((listing) => listing.dealType === "jv") : listings
+  return (preferred.length ? preferred : listings).slice(0, 3)
 }
 
 export default function Dashboard() {
-  const [ currentUser, setCurrentUser ] = useState<UserStats>()
-  const [ requests, setRequests ] = useState<Request[]>([])
-  const [ isLoading, setIsLoading ] = useState(false)
+  const [stats, setStats] = useState<UserStats>()
+  const [requests, setRequests] = useState<PartnerRequest[]>([])
+  const [listings, setListings] = useState<Listing[] | null>(null)
+  const [submissions, setSubmissions] = useState<ListingSubmission[]>([])
+  const [account, setAccount] = useState<MemberAccount | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const { user, isAuthenticated, token } = useSelector((state: RootState) => state.auth)
 
-  // Fetch user requests
-  const fetchRequests = async () => {
-    try {
-      setIsLoading(true)
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_SERVER_URL}/request/getUserRequests`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-      setRequests(response.data.data)
-      setIsLoading(false)
-    } catch (error) {
-      setIsLoading(false)
-      console.error('Error fetching requests:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // fetchRequests()
-
-  // Redirect to login if not authenticated
   useEffect(() => {
-    if (!isAuthenticated && !user) {
+    if (!isAuthenticated || !user) {
       router.push("/login")
       return
     }
-    
-    const getUser = async () => {
-      try {
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_SERVER_URL}/users/${user?.id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-        setCurrentUser(response.data.user)
-      } catch(error) {
-        console.log(error)
-      }
-    }
 
-    if (isAuthenticated && user) {
-      getUser()
-      fetchRequests()
+    let cancelled = false
+    Promise.all([getUserStats(user.id), getMyRequests(token), getListings()])
+      .then(([userStats, myRequests, allListings]) => {
+        if (cancelled) return
+        setStats(userStats)
+        setRequests(myRequests)
+        setListings(allListings)
+      })
+      .catch((error) => console.error("Couldn't load the dashboard:", error))
+      .finally(() => !cancelled && setIsLoading(false))
+
+    // Listing submissions live in the shared demo inbox; a failure there shouldn't block the rest.
+    getMyAccount(user.id)
+      .then((mine) => !cancelled && setAccount(mine))
+      .catch(() => undefined)
+
+    getMySubmissions(user.email)
+      .then((mine) => !cancelled && setSubmissions(mine))
+      .catch(() => undefined)
+
+    return () => {
+      cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, router, token, user])
 
   if (!isAuthenticated || !user) {
     return null
   }
 
-  const stats = {
-    myRequests: requests?.length || 0,
-    active: currentUser?.matched || 0,
-    matched: currentUser?.matched,
-    availableMatches: currentUser?.availableMatches || 0,
-  }
+  const firstName = user.fullName.split(" ")[0]
+  const pending = requests.filter((request) => request.status === "pending").length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
-      {/* Decorative Background Elements */}
-      <motion.div
-        className="absolute top-20 right-10 w-32 h-32 bg-yellow-200 rounded-full blur-3xl opacity-20"
-        animate={{
-          scale: [1, 1.3, 1],
-          opacity: [0.2, 0.3, 0.2],
-        }}
-        transition={{
-          repeat: Infinity,
-          duration: 5,
-          ease: "easeInOut",
-        }}
-      />
-      <motion.div
-        className="absolute bottom-40 left-10 w-40 h-40 bg-yellow-300 rounded-full blur-3xl opacity-20"
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.2, 0.3, 0.2],
-        }}
-        transition={{
-          repeat: Infinity,
-          duration: 6,
-          ease: "easeInOut",
-          delay: 2,
-        }}
-      />
+    <main className="bg-white pb-24">
+      <section className="border-b border-line bg-ivory">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-6 px-4 py-12 sm:px-6 lg:px-8">
+          <div>
+            <p className="eyebrow text-gold-deep">
+              {user.role}
+              {user.category ? ` · ${user.category}` : ""}
+            </p>
+            <h1 className="mt-3 font-display text-4xl text-ink sm:text-5xl">Welcome back, {firstName}</h1>
+            <p className="mt-3 text-muted">
+              {pending
+                ? `${pending} of your requests ${pending === 1 ? "is" : "are"} with our team for review.`
+                : "Here's where your requests and opportunities stand."}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/submit-request" className="inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-bold text-white hover:bg-ink/85">
+              <FiPlus aria-hidden="true" /> New request
+            </Link>
+            <Link href="/dashboard/profile" className="rounded-full border border-line bg-white px-5 py-3 text-sm font-bold text-ink hover:border-ink">
+              Edit profile
+            </Link>
+          </div>
+        </div>
+      </section>
 
-      <motion.div
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {/* Header */}
-        <motion.div variants={headerVariants} className="mb-8">
-          <motion.h1
-            className="text-4xl font-bold text-gray-900 mb-2"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 150 }}
-          >
-            Welcome back, {user.fullName.split(" ")[0]}!
-          </motion.h1>
-          <motion.p
-            className="text-gray-600"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            Registered as a <span className="font-semibold text-yellow-600">{user.role}</span>
-          </motion.p>
-        </motion.div>
+      {account && (account.status !== "active" || !account.profileCompleted || (account.role === "Investor" && !account.documents?.companyProfile)) ? (
+        <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gold/40 bg-gold-soft/40 p-5">
+            <p className="text-sm text-ink">
+              {account.status === "suspended"
+                ? "Your account is suspended. Please contact info@jointventureassets.com."
+                : !account.profileCompleted
+                  ? "Finish your profile so our team can approve your account."
+                  : account.role === "Investor" && !account.documents?.companyProfile
+                    ? "Upload your company profile so our team can approve your account."
+                    : "Your account is awaiting approval. Our team usually reviews new profiles within 48 hours."}
+            </p>
+            <Link href="/dashboard/profile" className="rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white hover:bg-ink/85">
+              {account.profileCompleted ? "View my profile" : "Complete my profile"}
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            icon={<FiPlus size={24} />}
-            label="My Requests"
-            value={stats.myRequests}
-            bgColor="bg-yellow-100"
-            iconColor="text-yellow-600"
-            delay={0.1}
-          />
-          <StatCard
-            icon={<FiTrendingUp size={24} />}
-            label="Active"
-            value={stats.active}
-            bgColor="bg-green-100"
-            iconColor="text-green-600"
-            delay={0.2}
-          />
-          {/* <StatCard
-            icon={<FiMessageSquare size={24} />}
-            label="Matched"
-            value={stats.matched}
-            bgColor="bg-blue-100"
-            iconColor="text-blue-600"
-            delay={0.3}
-          /> */}
-          <StatCard
-            icon={<FiEye size={24} />}
-            label="Available Matches"
-            value={stats.availableMatches}
-            bgColor="bg-purple-100"
-            iconColor="text-purple-600"
-            delay={0.4}
-          />
+      <div className="mx-auto max-w-7xl space-y-8 px-4 pt-10 sm:px-6 lg:px-8">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <StatCard icon={<FiFileText aria-hidden="true" />} label="My requests" value={isLoading ? "…" : requests.length} note={`${pending} under review`} />
+          <StatCard icon={<FiCheckCircle aria-hidden="true" />} label="Accepted" value={isLoading ? "…" : (stats?.matched ?? 0)} note="Requests our team has taken on" />
+          <StatCard icon={<FiCompass aria-hidden="true" />} label="Open opportunities" value={isLoading ? "…" : (stats?.availableMatches ?? 0)} note="Accepted requests from other members" />
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* My Requests Section */}
-          <SectionCard
-            title="My Requests"
-            action={{
-              label: "New Request",
-              onClick: () => router.push("/submit-request"),
-            }}
-            delay={0.5}
-          >
+        <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+          <SectionCard title="My requests" action={{ label: "New request", href: "/submit-request" }}>
             {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-500"></div>
+              <div className="space-y-3" aria-busy="true">
+                {[0, 1, 2].map((index) => <div key={index} className="h-16 animate-pulse rounded-xl bg-ivory" />)}
               </div>
             ) : requests.length > 0 ? (
-              <RequestList 
-                requests={requests}
-                onViewDetails={(id) => router.push(`/requests/${id}`)}
-              />
+              <RequestList requests={requests} />
             ) : (
               <EmptyState
-                icon={<FiPlus size={64} />}
+                icon={<FiPlus aria-hidden="true" className="h-5 w-5" />}
                 title="No requests yet"
-                description="Create your first request to get matched with partners"
-                action={{
-                  label: "Create Request",
-                  onClick: () => router.push("/submit-request"),
-                }}
+                description="Tell us about your land, or what you're looking for, and we'll find the right partners."
+                action={{ label: "Create a request", href: "/submit-request" }}
               />
             )}
           </SectionCard>
 
-          {/* Available Opportunities Section */}
-          <SectionCard
-            title="Available Opportunities"
-            action={{
-              label: "Browse All",
-              onClick: () => router.push("/browse-opportunities"),
-            }}
-            delay={0.6}
-          >
-            <EmptyState
-              icon={<FiEye size={64} />}
-              title="No opportunities available"
-              description="Check back later for new partnership opportunities"
-            />
+          <SectionCard title="Recommended for you" action={{ label: "All listings", href: "/listings" }}>
+            {listings ? (
+              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                {recommendedFor(user.role, listings).slice(0, 2).map((listing) => (
+                  <li key={listing.id}>
+                    <ListingCard listing={listing} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <ListingCardSkeleton />
+                <ListingCardSkeleton />
+              </div>
+            )}
           </SectionCard>
         </div>
 
-        {/* Quick Actions */}
+        <SectionCard title="My property listings" action={{ label: "List a property", href: "/listings/submit" }}>
+          {submissions.length ? (
+            <SubmissionList submissions={submissions} />
+          ) : (
+            <EmptyState
+              icon={<FiHome aria-hidden="true" className="h-5 w-5" />}
+              title="Nothing listed yet"
+              description="Have land or property for a joint venture or sale? Submit it and follow its review here."
+              action={{ label: "List your property", href: "/listings/submit" }}
+            />
+          )}
+        </SectionCard>
+
         <QuickActions />
-      </motion.div>
-    </div>
+      </div>
+    </main>
   )
 }

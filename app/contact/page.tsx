@@ -1,6 +1,9 @@
-import { FiPhone, FiMail, FiMapPin, FiClock } from "react-icons/fi";
-import ContactForm from "@/components/ContactForm";
+import { FiCheck, FiClock, FiMail, FiMapPin, FiPhone } from "react-icons/fi";
+import { FaWhatsapp } from "react-icons/fa";
 import { Metadata } from "next";
+import ContactForm from "@/components/contact/ContactForm";
+import { PageHero } from "@/components/ui/PageHero";
+import { WHATSAPP_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Contact Joint Venture Assets - Get Expert Real Estate Partnership Guidance",
@@ -18,106 +21,95 @@ export const metadata: Metadata = {
   }
 };
 
+const channels = [
+  {
+    icon: FiPhone,
+    title: "Phone",
+    lines: [
+      { text: "+234 814 043 1570", href: "tel:+2348140431570" },
+      { text: "+234 906 366 5415", href: "tel:+2349063665415" },
+    ],
+  },
+  {
+    icon: FiMail,
+    title: "Email",
+    lines: [
+      { text: "info@jointventureassets.com", href: "mailto:info@jointventureassets.com" },
+      { text: "partnerships@jointventureassets.com", href: "mailto:partnerships@jointventureassets.com" },
+    ],
+  },
+  {
+    icon: FiMapPin,
+    title: "Office",
+    lines: [{ text: "No 2 off Surulere Street, Dopemu, Lagos, Nigeria" }],
+  },
+  {
+    icon: FiClock,
+    title: "Hours",
+    lines: [{ text: "Mon – Fri: 8:00 am – 5:00 pm" }, { text: "Saturday: 10:00 am – 2:00 pm" }, { text: "Sunday: closed" }],
+  },
+];
+
+const reasons = [
+  "Free first consultation",
+  "Guidance on individual, group and government partnerships",
+  "Access to vetted landowners, investors and cooperatives",
+  "Full project management for every partnership type",
+];
+
 export default function Contact() {
   return (
-    <div
-      className="bg-gray-50 min-h-screen py-16 px-4 flex flex-col items-center"
-    >
-      <h1
-        className="text-3xl font-bold text-gray-900 mb-2 text-center"
-      >
-        Contact Us
-      </h1>
-      <p
-        className="text-gray-700 text-base sm:text-lg mb-10 text-center max-w-xl"
-      >
-        Ready to start your joint venture journey? Get in touch with our team for expert guidance and consultation.
-      </p>
-      <div
-        className="flex flex-col lg:flex-row gap-8 w-full max-w-5xl"
-      >
-        {/* Contact Info */}
-        <div className="flex-1 flex flex-col gap-6">
-          <div
-            className="bg-white rounded-xl shadow p-7"
-          >
-            <h2 className="font-bold text-lg text-gray-900 mb-4">Get in Touch</h2>
-            <div className="flex flex-col gap-4">
-              <div className="flex items-start gap-3">
-                <div className="bg-yellow-100 p-2 rounded-lg">
-                  <FiPhone className="text-yellow-500 text-xl" />
+    <main className="bg-white pb-24">
+      <PageHero
+        eyebrow="Contact us"
+        title="Let's talk about your land, capital or deal"
+        intro="Tell us what you're working on. Our team replies to every message within one working day."
+      />
+
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 pt-12 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:px-8">
+        <div className="space-y-6">
+          <ul className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            {channels.map(({ icon: Icon, title, lines }) => (
+              <li key={title} className="bg-white p-6">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-gold-soft text-gold-deep">
+                  <Icon aria-hidden="true" />
+                </span>
+                <p className="mt-4 font-bold text-ink">{title}</p>
+                <div className="mt-1 space-y-0.5 text-sm text-muted">
+                  {lines.map((line) =>
+                    "href" in line && line.href ? (
+                      <a key={line.text} href={line.href} className="block break-words hover:text-ink hover:underline">
+                        {line.text}
+                      </a>
+                    ) : (
+                      <p key={line.text}>{line.text}</p>
+                    ),
+                  )}
                 </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Phone</div>
-                  <div className="text-gray-700 text-sm">+234 8140431570<br />+234 9063665415</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="bg-gray-100 p-2 rounded-lg">
-                  <FiMail className="text-gray-900 text-xl" />
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Email</div>
-                  <div className="text-gray-700 text-sm">
-                    info@jointventureassets.com<br />
-                    partnerships@jointventureassets.com
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="bg-yellow-100 p-2 rounded-lg">
-                  <FiMapPin className="text-yellow-500 text-xl" />
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Office</div>
-                  <div className="text-gray-700 text-sm">
-                    No 2 off Surulere Street,<br />Dopemu, Lagos, Nigeria
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="bg-gray-100 p-2 rounded-lg">
-                  <FiClock className="text-gray-900 text-xl" />
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Business Hours</div>
-                  <div className="text-gray-700 text-sm">
-                    Monday - Friday: 8:00 AM - 5:00 PM<br />
-                    Saturday: 10:00 AM - 2:00 PM<br />
-                    Sunday: Closed
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Why Contact Card */}
-          <div
-            className="bg-gray-900 rounded-xl p-6 mt-6 text-white shadow flex flex-col gap-3"
-          >
-            <h3 className="font-bold text-lg mb-2">Why Contact Joint Venture Assets?</h3>
-            <ul className="space-y-2 text-sm">
-              <li className="flex items-center gap-2">
-                <span className="text-yellow-400">&#10003;</span>
-                Expert guidance on individual, group, and government partnerships
               </li>
-              <li className="flex items-center gap-2">
-                <span className="text-yellow-400">&#10003;</span>
-                Free initial consultation
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-yellow-400">&#10003;</span>
-                Access to vetted individual, cooperative, and government partners
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-yellow-400">&#10003;</span>
-                Full project management for all partnership types
-              </li>
+            ))}
+          </ul>
+
+          <div className="rounded-2xl bg-ink p-7 text-white">
+            <h2 className="font-display text-2xl">Why talk to us?</h2>
+            <ul className="mt-5 space-y-3 text-sm text-gray-300">
+              {reasons.map((reason) => (
+                <li key={reason} className="flex items-start gap-3">
+                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gold/20 text-gold">
+                    <FiCheck aria-hidden="true" className="h-3 w-3" />
+                  </span>
+                  {reason}
+                </li>
+              ))}
             </ul>
+            <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="mt-7 inline-flex items-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-bold text-ink hover:bg-gold/85">
+              <FaWhatsapp aria-hidden="true" /> Chat on WhatsApp
+            </a>
           </div>
         </div>
-        {/* Contact Form */}
+
         <ContactForm />
       </div>
-    </div>
+    </main>
   );
 }

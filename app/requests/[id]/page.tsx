@@ -1,289 +1,209 @@
 "use client"
 
-import { useParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
-import { FiArrowLeft, FiClock, FiCheckCircle, FiXCircle, FiEdit, FiTrash2 } from "react-icons/fi"
-import { useSelector } from "react-redux"
-import { RootState } from "@/store/store"
-import axios from "axios"
 import Link from "next/link"
-import { Spinner } from "@/components/Spinner"
+import { useParams, useRouter } from "next/navigation"
+import { useEffect, useState, type ReactNode } from "react"
+import { useSelector } from "react-redux"
+import { FiArrowLeft, FiEdit2, FiFileText, FiTrash2 } from "react-icons/fi"
+import { RootState } from "@/store/store"
+import { deleteRequest, getRequest } from "@/lib/api/requests"
+import { errorMessage } from "@/lib/api/mock"
+import { Alert } from "@/components/ui/form"
+import { StatusBadge, formatBudget, humanise, requestTypeLabel } from "@/components/requests/StatusBadge"
+import type { PartnerRequest } from "@/types"
 
-interface Request {
-  _id: string
-  title: string
-  description: string
-  status: 'pending' | 'accepted' | 'rejected'
-  createdAt: string
-  updatedAt?: string
-  // Add any additional fields that might come from the API
+const formatDate = (dateString: string) =>
+  new Date(dateString).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })
+
+const statusMessage = {
+  pending: "Our team is reviewing your request. We usually reply within 24–48 hours.",
+  accepted: "Your request has been accepted. Our team will contact you about suitable partners.",
+  rejected: "Your request wasn't accepted this time. Contact us to find out why, or edit and resubmit it.",
+}
+
+function Detail({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <dt className="eyebrow text-muted">{label}</dt>
+      <dd className="mt-1.5 font-semibold text-ink">{children}</dd>
+    </div>
+  )
 }
 
 export default function RequestDetails() {
   const { id } = useParams()
-  console.log(id)
   const router = useRouter()
-  const [request, setRequest] = useState<Request | null>(null)
-  const [isDeleteLoading, setIsDeleteLoading] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  // const [success, setSuccess ] = useState("")
+  const [request, setRequest] = useState<PartnerRequest | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { token } = useSelector((state: RootState) => state.auth)
 
-  const handleDeleteRequest = async () => {
-    try {
-      setError("")
-      setIsDeleteLoading(true)
-      await axios.delete(`${process.env.NEXT_PUBLIC_SERVER_URL}/request/delete`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-      setIsDeleteLoading(false)
-      setError("")
-      router.back()
-
-    } catch (error: unknown) {
-      setIsDeleteLoading(false)
-      if (axios.isAxiosError(error)) {
-        setError(error.response?.data?.message || "Something went wrong. Please try again.")
-        console.log(error)
-      } else {
-        setError("Something went wrong. Please try again.")
-      }
-
-      setTimeout(() => {
-        setError("")
-      }, 5000)
-    } finally {
-      setIsDeleteLoading(false)
-    }
-  }
-
   useEffect(() => {
-    const fetchRequestDetails = async () => {
-      try {
-        setIsLoading(true)
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_SERVER_URL}/request/user/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-        setRequest(response.data.data)
-        console.log(response.data.data)
-      } catch (err) {
-        console.error('Error fetching request details:', err)
-        setError('Failed to load request details. Please try again later.')
-      } finally {
-        setIsLoading(false)
-      }
+    if (!id || !token) {
+      setIsLoading(false)
+      return
     }
-
-    if (id && token) {
-      fetchRequestDetails()
-    }
+    getRequest(token, String(id))
+      .then(setRequest)
+      .catch((err) => setError(errorMessage(err, "Failed to load request details. Please try again later.")))
+      .finally(() => setIsLoading(false))
   }, [id, token])
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <FiClock className="text-yellow-500" />
-      case 'accepted':
-        return <FiCheckCircle className="text-green-500" />
-      case 'rejected':
-        return <FiXCircle className="text-red-500" />
-      default:
-        return <FiClock className="text-gray-400" />
+  const handleDeleteRequest = async () => {
+    try {
+      setError(null)
+      setIsDeleting(true)
+      await deleteRequest(token, String(id))
+      router.push("/dashboard")
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Something went wrong. Please try again."))
+      setIsDeleting(false)
+      setConfirmDelete(false)
     }
   }
 
-  const getStatusBadgeClasses = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'accepted':
-        return 'bg-green-100 text-green-800'
-      case 'rejected':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusTextColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'text-yellow-700'
-      case 'accepted':
-        return 'text-green-700'
-      case 'rejected':
-        return 'text-red-700'
-      default:
-        return 'text-gray-700'
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+  const back = (
+    <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
+      <FiArrowLeft aria-hidden="true" /> My dashboard
+    </Link>
+  )
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-500"></div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center p-8 max-w-md bg-white rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Error Loading Request</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => router.back()}
-            className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors"
-          >
-            Go Back
-          </button>
+      <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
+        {back}
+        <div className="mt-8 space-y-4" aria-busy="true">
+          <div className="h-10 w-2/3 animate-pulse rounded-lg bg-ivory" />
+          <div className="h-64 animate-pulse rounded-2xl bg-ivory" />
         </div>
-      </div>
+      </main>
     )
   }
 
   if (!request) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center p-8 max-w-md bg-white rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Request Not Found</h2>
-          <p className="text-gray-600 mb-6">The requested resource could not be found.</p>
-          <button
-            onClick={() => router.back()}
-            className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors"
-          >
-            Go Back
-          </button>
+      <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
+        {back}
+        <div className="mt-8 rounded-2xl border border-line bg-ivory p-10 text-center">
+          <h1 className="font-display text-2xl text-ink">Request not found</h1>
+          <p className="mt-2 text-muted">{error ?? (token ? "This request may have been deleted." : "Log in to view your requests.")}</p>
+          <Link href={token ? "/dashboard" : "/login"} className="mt-6 inline-flex rounded-full bg-ink px-6 py-3 text-sm font-bold text-white hover:bg-ink/85">
+            {token ? "Back to dashboard" : "Log in"}
+          </Link>
         </div>
-      </div>
+      </main>
     )
   }
 
+  const subtype = humanise(request.developmentType || request.partnershipType || request.propertyWanted)
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-yellow-600 hover:text-yellow-700 transition-colors mb-4"
-          >
-            <FiArrowLeft className="mr-2" /> Back to Dashboard
-          </button>
+    <main className="bg-white pb-24">
+      <section className="border-b border-line bg-ivory">
+        <div className="mx-auto max-w-5xl px-4 pt-10 pb-12 sm:px-6">
+          {back}
+          <div className="mt-8 flex flex-wrap items-center gap-2">
+            <StatusBadge status={request.status} />
+            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-muted">
+              {requestTypeLabel[request.requestType]}
+              {subtype ? ` · ${subtype}` : ""}
+            </span>
+          </div>
+          <h1 className="mt-4 font-display text-4xl leading-tight text-ink">{request.title || "Untitled request"}</h1>
+          <p className="mt-2 text-sm text-muted">Submitted {formatDate(request.createdAt)}</p>
+        </div>
+      </section>
+
+      <div className="mx-auto grid max-w-5xl gap-8 px-4 pt-10 sm:px-6 lg:grid-cols-[1fr_18rem]">
+        <div className="space-y-8">
+          <Alert tone={request.status === "rejected" ? "error" : request.status === "accepted" ? "success" : "info"}>{statusMessage[request.status]}</Alert>
+          {error ? <Alert tone="error">{error}</Alert> : null}
+
+          <section>
+            <h2 className="font-display text-2xl text-ink">Description</h2>
+            <p className="mt-3 leading-relaxed whitespace-pre-line text-gray-700">{request.description}</p>
+          </section>
+
+          <dl className="grid gap-6 rounded-2xl border border-line p-6 sm:grid-cols-3">
+            <Detail label={request.requestType === "land" ? "Value" : "Budget"}>{formatBudget(request.budget)}</Detail>
+            <Detail label="Location">{request.location || "Not specified"}</Detail>
+            <Detail label="Timeline">{request.timeline || "Not specified"}</Detail>
+            {request.landSize ? <Detail label="Land size">{request.landSize}</Detail> : null}
+            {request.titleDocument ? <Detail label="Title document">{humanise(request.titleDocument)}</Detail> : null}
+            {request.sharingFormula ? (
+              <Detail label="Sharing formula">
+                {request.sharingFormula.replace("_", "/")}
+                {request.sharingNegotiable !== undefined ? ` (${request.sharingNegotiable ? "negotiable" : "fixed"})` : ""}
+              </Detail>
+            ) : null}
+            {request.premium !== undefined ? <Detail label="Premium">{request.premium > 0 ? formatBudget(String(request.premium)) : "No premium"}</Detail> : null}
+            {request.housingProposal ? <Detail label="Proposal">{humanise(request.housingProposal)}</Detail> : null}
+            {request.propertyWanted ? <Detail label="Looking to buy">{request.propertyWanted}</Detail> : null}
+            {request.paymentMethod ? <Detail label="Payment">{request.paymentMethod}</Detail> : null}
+            {request.updatedAt && request.updatedAt !== request.createdAt ? <Detail label="Last updated">{formatDate(request.updatedAt)}</Detail> : null}
+          </dl>
+
+          {request.documents?.length ? (
+            <section>
+              <h2 className="font-display text-2xl text-ink">Documents</h2>
+              <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {request.documents.map((doc, index) => (
+                  <li key={doc + index}>
+                    <a href={doc} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-xl border border-line">
+                      {/\.(jpe?g|png|webp|gif)$/i.test(doc) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={doc} alt={`Document ${index + 1}`} className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-105" />
+                      ) : (
+                        <span className="flex aspect-[4/3] items-center justify-center gap-2 bg-ivory text-sm font-semibold text-ink">
+                          <FiFileText aria-hidden="true" /> Document {index + 1}
+                        </span>
+                      )}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="bg-white shadow overflow-hidden sm:rounded-lg"
-        >
-          <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-lg leading-6 font-medium text-gray-900">{request.title}</h3>
-                <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                  Created on {formatDate(request.createdAt)}
-                </p>
-              </div>
-              <div className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClasses(request.status)}`}>
-                {getStatusIcon(request.status)}
-                <span className="ml-1 capitalize">{request.status}</span>
-              </div>
-            </div>
+        <aside className="space-y-4 self-start lg:sticky lg:top-28">
+          <div className="rounded-2xl border border-line p-6">
+            <p className="eyebrow text-muted">Contact on this request</p>
+            <p className="mt-3 font-semibold text-ink">{request.fullName}</p>
+            <p className="text-sm text-muted">{request.email}</p>
+            {request.phoneNumber ? <p className="text-sm text-muted">{request.phoneNumber}</p> : null}
           </div>
-          
-          <div className="px-4 py-5 sm:p-6">
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-500 mb-2">Description</h4>
-              <p className="text-gray-700 whitespace-pre-line">{request.description}</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 pt-6 border-t border-gray-200">
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">Status</h4>
-                <div className="mt-1 flex items-center">
-                  {getStatusIcon(request.status)}
-                  <span className={`ml-2 capitalize ${getStatusTextColor(request.status)}`}>{request.status}</span>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">Created</h4>
-                <p className="mt-1 text-gray-900">{formatDate(request.createdAt)}</p>
-              </div>
-              {request.updatedAt && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">Last Updated</h4>
-                  <p className="mt-1 text-gray-900">{formatDate(request.updatedAt)}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="px-4 py-4 bg-gray-50 text-right sm:px-6 border-t border-gray-200">
-            <div className="flex justify-between">
-              <button
-                type="button"
-                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 hover:cursor-pointer hover:bg-red-600 hover:text-white"
-                onClick={() => {
-                  if (confirm('Are you sure you want to delete this request?')) {
-                    // Handle delete
-                    handleDeleteRequest()
-                  }
-                }}
-              >
-                {isDeleteLoading ? (
-                  <Spinner />
-                
-                ): (
-                  <>
-                    <FiTrash2 className="-ml-1 mr-2 h-5 w-5 text-gray-500 hover:text-white" />
-                    Delete
-                  </>
-                )}
-              </button>
-              <div className="space-x-3">
-                <Link
-                  href={`/requests/${id}/edit`}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
-                >
-                  <FiEdit className="-ml-1 mr-2 h-5 w-5" />
-                  Edit Request
-                </Link>
+          <Link
+            href={`/requests/${request._id}/edit`}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-bold text-white hover:bg-ink/85"
+          >
+            <FiEdit2 aria-hidden="true" /> Edit request
+          </Link>
+          {confirmDelete ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-semibold text-red-800">Delete this request? This can&apos;t be undone.</p>
+              <div className="mt-3 flex gap-2">
+                <button type="button" onClick={handleDeleteRequest} disabled={isDeleting} className="flex-1 rounded-lg bg-red-700 px-3 py-2 text-sm font-bold text-white hover:bg-red-800 disabled:opacity-60">
+                  {isDeleting ? "Deleting…" : "Delete"}
+                </button>
+                <button type="button" onClick={() => setConfirmDelete(false)} className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm font-semibold text-ink">
+                  Cancel
+                </button>
               </div>
             </div>
-          </div>
-        </motion.div>
-
-        {/* Matches/Responses Section - Can be implemented later */}
-        {/* <div className="mt-8">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Responses</h3>
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <p className="text-gray-500 text-center py-8">
-                No responses yet. Check back later for updates.
-              </p>
-              
-            </div>
-          </div>
-        </div> */}
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-line px-5 py-3 text-sm font-semibold text-red-700 hover:border-red-300 hover:bg-red-50"
+            >
+              <FiTrash2 aria-hidden="true" /> Delete request
+            </button>
+          )}
+        </aside>
       </div>
-    </div>
+    </main>
   )
 }

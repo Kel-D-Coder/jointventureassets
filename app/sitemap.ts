@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
+import { getListings } from '@/lib/api/listings';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://www.jointventureassets.com';
   const currentDate = new Date();
   
@@ -13,6 +14,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: baseUrl,
+      lastModified: currentDate,
+      changeFrequency: 'daily' as const,
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/listings`,
       lastModified: currentDate,
       changeFrequency: 'daily' as const,
       priority: 0.9,
@@ -37,16 +44,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  // Example of dynamic routes (you can fetch these from your API)
-  // const properties = await fetchProperties();
-  // const propertyPages = properties.map((property) => ({
-  //   url: `${baseUrl}/properties/${property.id}`,
-  //   lastModified: property.updatedAt || currentDate,
-  //   changeFrequency: 'weekly' as const,
-  //   priority: 0.7,
-  // }));
+  const listingPages = (await getListings()).map((listing) => ({
+    url: `${baseUrl}/listings/${listing.id}`,
+    lastModified: new Date(listing.createdAt),
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }));
 
-  return [...staticPages];
-  // When you have dynamic routes, combine them like this:
-  // return [...staticPages, ...propertyPages];
+  return [...staticPages, ...listingPages];
 }

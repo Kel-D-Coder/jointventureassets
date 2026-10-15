@@ -1,34 +1,18 @@
 import { useState } from "react";
-import axios from "axios";
 import { useAppSelector } from "@/hooks/hooks";
-
-interface RequestItem {
-  _id: string;
-  title: string;
-  userId: string;
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  location: string;
-  budget: string;
-  timeline: string;
-  requestType: string;
-  description: string;
-  documents: string[];
-  createdAt: string;
-  updatedAt: string;
-  status: "pending" | "accepted" | "rejected";
-}
+import { searchRequests as searchRequestsApi } from "@/lib/api/requests";
+import { errorMessage } from "@/lib/api/mock";
+import type { PartnerRequest, RequestType } from "@/types";
 
 interface UseSearchRequestsResult {
-  data: RequestItem[] | null;
+  data: PartnerRequest[] | null;
   loading: boolean;
   error: string | null;
   searchRequests: (type?: string) => Promise<void>;
 }
 
 export const useSearchRequests = (): UseSearchRequestsResult => {
-  const [data, setData] = useState<RequestItem[] | null>(null);
+  const [data, setData] = useState<PartnerRequest[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const token = useAppSelector((state) => state.auth.token);
@@ -37,25 +21,9 @@ export const useSearchRequests = (): UseSearchRequestsResult => {
     try {
       setLoading(true);
       setError(null);
-
-      // Construct query param
-      const queryParam = type ? `?requestType=${type}` : "";
-
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_SERVER_URL}/request/search${queryParam}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setData(response.data.data || []);
-    } catch (err: any) {
-      const message =
-        err.response?.data?.message ||
-        "An error occurred while fetching requests";
-      setError(message);
+      setData(await searchRequestsApi(token, type as RequestType | undefined));
+    } catch (err: unknown) {
+      setError(errorMessage(err, "An error occurred while fetching requests"));
     } finally {
       setLoading(false);
     }

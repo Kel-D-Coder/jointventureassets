@@ -1,72 +1,100 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { FiArrowRight, FiUpload, FiX } from "react-icons/fi";
-import { useState } from "react";
+import { useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
 import Link from "next/link";
-import axios from "axios"
+import { FiArrowRight, FiCheckCircle, FiFileText, FiUploadCloud, FiX } from "react-icons/fi";
+import { createRequest } from "@/lib/api/requests";
+import { errorMessage } from "@/lib/api/mock";
 import { useAppSelector } from "@/hooks/hooks";
-import { Spinner } from "@/components/Spinner";
+import { PageHero } from "@/components/ui/PageHero";
+import { Alert, Field, MoneyInput, Select, SubmitButton, YesNo, inputClass, type YesNoValue } from "@/components/ui/form";
+import { requestTypeHint, requestTypeLabel } from "@/components/requests/StatusBadge";
+import { cx } from "@/lib/format";
+import type { RequestType } from "@/types";
 
-// Animation variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-} as const;
+const developmentTypes = [
+  { value: "residential", label: "Residential" },
+  { value: "commercial", label: "Commercial" },
+  { value: "industrial", label: "Industrial" },
+  { value: "agricultural", label: "Agricultural" },
+];
 
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      type: "spring",
-      stiffness: 100,
-      damping: 12,
-    },
-  },
-} as const;
+const partnershipTypes = [
+  { value: "mandate", label: "Mandate" },
+  { value: "lawyer", label: "Lawyer" },
+  { value: "property_consultant", label: "Property consultant" },
+  { value: "building_expert", label: "Building expert" },
+];
 
-const inputFocusVariants = {
-  focus: {
-    scale: 1.01,
-    transition: { type: "spring", stiffness: 300, damping: 20 },
-  },
-  blur: {
-    scale: 1,
-  },
-} as const;
+const housingProposals = [
+  { value: "apartment", label: "Apartment" },
+  { value: "duplex", label: "Duplex" },
+  { value: "maisonette", label: "Maisonette" },
+  { value: "bungalows", label: "Bungalows" },
+  { value: "condos", label: "Condos" },
+];
+
+const titleDocuments = [
+  { value: "c_of_o", label: "C of O" },
+  { value: "governors_consent", label: "Governor's Consent" },
+  { value: "deed_of_assignment", label: "Deed of Assignment" },
+  { value: "excision", label: "Excision" },
+  { value: "gazzette", label: "Gazette" },
+];
+
+const propertiesWanted = ["Land", "Residential", "Commercial", "Mixed use", "Agricultural"];
+
+const paymentMethods = ["Outright payment", "Instalments", "Mortgage", "Not sure yet"];
+
+/**
+ * The three choices on the form. "Land & property" covers both sides of a
+ * sale: offering land (requestType "land") or wanting to buy ("purchase").
+ */
+const kinds: Array<{ key: string; label: string; hint: string; types: RequestType[] }> = [
+  { key: "property", label: "Land & property", hint: "Offer land or property, or ask to buy some.", types: ["land", "purchase"] },
+  { key: "development", label: requestTypeLabel.development, hint: requestTypeHint.development, types: ["development"] },
+  { key: "partnership", label: requestTypeLabel.partnership, hint: requestTypeHint.partnership, types: ["partnership"] },
+];
+
+const sharingFormulas = [
+  { value: "50_50", label: "50% / 50%" },
+  { value: "60_40", label: "60% / 40%" },
+  { value: "70_30", label: "70% / 30%" },
+];
+
+const MAX_FILE_MB = 10;
+
+interface FormState {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  requestType: RequestType;
+  location: string;
+  budget: string;
+  timeline: string;
+  description: string;
+  title: string;
+  developmentType: string;
+  partnershipType: string;
+  landSize: string;
+  landValue: string;
+  housingProposal: string;
+  titleDocument: string;
+  sharingFormula: string;
+  sharingNegotiable: YesNoValue;
+  hasPremium: YesNoValue;
+  /** Digits only. */
+  premium: string;
+  propertyWanted: string;
+  paymentMethod: string;
+  files: File[];
+}
 
 export default function SubmitRequestPage() {
-  interface FormData {
-    fullName: string;
-    email: string;
-    phoneNumber: string;
-    requestType: "land" | "development" | "partnership" ;
-    location: string;
-    budget: string;
-    timeline: string;
-    description: string;
-    title: string;
-    developmentType: string;
-    partnershipType: string;
-    landSize: string;
-    landValue: string;
-    housingProposal: string;
-    titleDocument: string;
-    sharingFormula: string;
-    files: File[];
-  }
-
-  const [formData, setFormData] = useState<FormData>({
-    fullName: "",
-    email: "",
+  const { user, token, isAuthenticated } = useAppSelector((state) => state.auth);
+  const [formData, setFormData] = useState<FormState>({
+    fullName: user?.fullName ?? "",
+    email: user?.email ?? "",
     phoneNumber: "",
     requestType: "land",
     location: "",
@@ -81,696 +109,389 @@ export default function SubmitRequestPage() {
     housingProposal: "",
     titleDocument: "",
     sharingFormula: "",
+    sharingNegotiable: "",
+    hasPremium: "",
+    premium: "",
+    propertyWanted: "",
+    paymentMethod: "",
     files: [],
   });
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [error, setError] = useState("")
-  const token = useAppSelector(state => state.auth.token)
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
-  const handleChange = (
-    e:
-      | React.ChangeEvent<HTMLInputElement>
-      | React.ChangeEvent<HTMLTextAreaElement>
-      | React.ChangeEvent<HTMLSelectElement>
-  ) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setFormData((prev) => ({
-        ...prev,
-        files: [...prev.files, ...newFiles],
-      }));
-    }
+  const addFiles = (list: FileList | null) => {
+    if (!list) return;
+    const incoming = Array.from(list);
+    const tooBig = incoming.filter((file) => file.size > MAX_FILE_MB * 1024 * 1024);
+    setError(tooBig.length ? `${tooBig.map((f) => f.name).join(", ")} ${tooBig.length === 1 ? "is" : "are"} over ${MAX_FILE_MB} MB.` : "");
+    setFormData((prev) => ({ ...prev, files: [...prev.files, ...incoming.filter((file) => !tooBig.includes(file))] }));
+    if (fileInput.current) fileInput.current.value = "";
   };
+
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragging(false);
+    addFiles(e.dataTransfer.files);
+  };
+
+  const setValue = <K extends keyof FormState>(key: K, value: FormState[K]) => setFormData((prev) => ({ ...prev, [key]: value }));
 
   const removeFile = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      files: prev.files.filter((_, i) => i !== index),
-    }));
+    setFormData((prev) => ({ ...prev, files: prev.files.filter((_, i) => i !== index) }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
-    const submitData = new FormData();
 
-    // Append text fields
-    submitData.append("fullName", formData.fullName);
-    submitData.append("email", formData.email);
-    submitData.append("phoneNumber", formData.phoneNumber);
-    submitData.append("requestType", formData.requestType);
-    submitData.append("location", formData.location);
-    submitData.append("budget", formData.budget);
-    submitData.append("timeline", formData.timeline);
-    submitData.append("description", formData.description);
-    submitData.append("title", formData.title);
-
-    if (formData.requestType === "land") {
-      submitData.append("landSize", formData.landSize);
-      submitData.append("landValue", formData.landValue);
-      submitData.append("housingProposal", formData.housingProposal);
-      submitData.append("titleDocument", formData.titleDocument);
-      submitData.append("sharingFormula", formData.sharingFormula);
+    // Only send the fields that belong to the chosen request type, as the real API expects.
+    const isLand = formData.requestType === "land";
+    if (isLand && (!formData.sharingNegotiable || !formData.hasPremium)) {
+      setError("Say whether the sharing formula is negotiable and whether there's a premium.");
+      return;
     }
-
-    if (formData.requestType === "development") {
-      submitData.append("developmentType", formData.developmentType);
+    if (isLand && formData.hasPremium === "yes" && !(Number(formData.premium) > 0)) {
+      setError("Enter the premium amount.");
+      return;
     }
-
-    if (formData.requestType === "partnership") {
-      submitData.append("partnershipType", formData.partnershipType);
-    }
-
-    formData.files.forEach((file) => {
-      submitData.append("documents", file); 
-    });
+    const submitData = {
+      fullName: formData.fullName,
+      email: formData.email,
+      phoneNumber: formData.phoneNumber,
+      requestType: formData.requestType,
+      location: formData.location,
+      budget: formData.budget,
+      timeline: formData.timeline,
+      description: formData.description,
+      title: formData.title,
+      landSize: isLand ? formData.landSize : undefined,
+      landValue: isLand ? formData.landValue : undefined,
+      housingProposal: isLand ? formData.housingProposal : undefined,
+      titleDocument: isLand ? formData.titleDocument : undefined,
+      sharingFormula: isLand ? formData.sharingFormula : undefined,
+      sharingNegotiable: isLand ? formData.sharingNegotiable === "yes" : undefined,
+      premium: isLand ? (formData.hasPremium === "yes" ? Number(formData.premium) : 0) : undefined,
+      developmentType: formData.requestType === "development" ? formData.developmentType : undefined,
+      partnershipType: formData.requestType === "partnership" ? formData.partnershipType : undefined,
+      propertyWanted: formData.requestType === "purchase" ? formData.propertyWanted : undefined,
+      paymentMethod: formData.requestType === "purchase" ? formData.paymentMethod : undefined,
+      files: formData.files,
+    };
 
     try {
-      setIsSubmitting(true)
-      setSubmitSuccess(false)
-      await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URL}/request/create`, submitData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        }
-      })
-      setIsSubmitting(false)
-      setSubmitSuccess(true)
+      setIsSubmitting(true);
+      setError("");
+      await createRequest(token, submitData);
+      setSubmitSuccess(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error: unknown) {
-      setIsSubmitting(false)
-      setIsSubmitting(false)
-      if (axios.isAxiosError(error)) {
-        setError(error.response?.data?.message || "Something went wrong. Please try again.")
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
-
-      setTimeout(() => {
-        setError("")
-      }, 5000)
-      
-      console.log(error)
+      setError(errorMessage(error, "Something went wrong. Please try again."));
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   };
 
   if (submitSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-20 px-4">
-        <motion.div
-          className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8 md:p-12 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg
-              className="w-10 h-10 text-green-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Request Submitted Successfully!
-          </h1>
-          <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-            Thank you for submitting your request. Our team will review your
-            information and get back to you within 24-48 hours.
+      <main className="bg-ivory px-4 py-20 sm:py-28">
+        <div className="mx-auto max-w-xl rounded-3xl border border-line bg-white p-10 text-center">
+          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-50 text-green-700">
+            <FiCheckCircle aria-hidden="true" className="h-8 w-8" />
+          </span>
+          <h1 className="mt-6 font-display text-3xl text-ink">Request submitted</h1>
+          <p className="mt-3 text-muted">
+            Thank you. Our team will review it within 24–48 hours and start sourcing. Once approved, members can see it and send enquiries. Follow its status on your dashboard.
           </p>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold py-3 px-6 rounded-full transition-colors duration-200"
-          >
-            Return to Home
-            <FiArrowRight className="w-5 h-5" />
-          </Link>
-        </motion.div>
-      </div>
+          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-bold text-white hover:bg-ink/85">
+              Go to my dashboard <FiArrowRight aria-hidden="true" />
+            </Link>
+            <Link href="/listings" className="rounded-full border border-line px-6 py-3 text-sm font-bold text-ink hover:border-ink">
+              Browse listings
+            </Link>
+          </div>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        className="max-w-4xl mx-auto"
-        initial="hidden"
-        animate="visible"
-        variants={containerVariants}
-      >
-        <motion.div className="text-center mb-12" variants={itemVariants}>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
-            Submit Your Request
-          </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Fill out the form below to submit your land or development
-            opportunity. Our team will review your request and get back to you
-            shortly.
-          </p>
-        </motion.div>
+    <main className="bg-white pb-24">
+      <PageHero
+        eyebrow="Post a request"
+        title="Didn't find what you want? Post a request"
+        intro="Tell us exactly what you're looking for, or what you have to offer. Our team sources it for you, and once it's approved, members on the platform can see your request and send enquiries."
+      />
 
-        <motion.div
-          className="bg-white rounded-2xl shadow-xl overflow-hidden"
-          variants={itemVariants}
-          whileHover={{
-            y: -5,
-            transition: { type: "spring", stiffness: 300, damping: 15 },
-          }}
-        >
-          <div className="p-6 sm:p-8 md:p-10">
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-6">
-                {/* Name and Email */}
-                <motion.div
-                  variants={itemVariants}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                >
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Full Name <span className="text-red-500">*</span>
-                    </label>
-                    <motion.div
-                      variants={inputFocusVariants}
-                      animate={focusedField === "name" ? "focus" : "blur"}
-                      className="relative"
-                    >
-                      <input
-                        type="text"
-                        name="fullName"
-                        required
-                        value={formData.fullName}
-                        onChange={handleChange}
-                        onFocus={() => setFocusedField("fullName")}
-                        onBlur={() => setFocusedField(null)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                        placeholder="Emeka john"
-                      />
-                    </motion.div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email <span className="text-red-500">*</span>
-                    </label>
-                    <motion.div
-                      variants={inputFocusVariants}
-                      animate={focusedField === "email" ? "focus" : "blur"}
-                      className="relative"
-                    >
-                      <input
-                        type="email"
-                        name="email"
-                        required
-                        value={formData.email}
-                        onChange={handleChange}
-                        onFocus={() => setFocusedField("email")}
-                        onBlur={() => setFocusedField(null)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                        placeholder="your@email.com"
-                      />
-                    </motion.div>
-                  </div>
-                </motion.div>
-
-                {/* Phone */}
-                <motion.div variants={itemVariants}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone Number
-                  </label>
-                  <motion.div
-                    variants={inputFocusVariants}
-                    animate={focusedField === "phone" ? "focus" : "blur"}
-                    className="relative"
-                  >
-                    <input
-                      type="tel"
-                      name="phoneNumber"
-                      value={formData.phoneNumber}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField("phoneNumber")}
-                      onBlur={() => setFocusedField(null)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                      placeholder="+234 2547 000 0000"
-                    />
-                  </motion.div>
-                </motion.div>
-
-                {/* Location, Budget, Timeline */}
-                <motion.div
-                  variants={itemVariants}
-                  className="grid grid-cols-1 md:grid-cols-3 gap-6"
-                >
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Location
-                    </label>
-                    <motion.div
-                      variants={inputFocusVariants}
-                      animate={focusedField === "location" ? "focus" : "blur"}
-                      className="relative"
-                    >
-                      <input
-                        type="text"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleChange}
-                        onFocus={() => setFocusedField("location")}
-                        onBlur={() => setFocusedField(null)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                        placeholder="No 1, example street, area"
-                      />
-                    </motion.div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Budget
-                    </label>
-                    <motion.div
-                      variants={inputFocusVariants}
-                      animate={focusedField === "budget" ? "focus" : "blur"}
-                      className="relative"
-                    >
-                      <input
-                        type="text"
-                        name="budget"
-                        value={formData.budget}
-                        onChange={handleChange}
-                        onFocus={() => setFocusedField("budget")}
-                        onBlur={() => setFocusedField(null)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                        placeholder="e.g. ₦500,000,000"
-                      />
-                    </motion.div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Timeline
-                    </label>
-                    <motion.div
-                      variants={inputFocusVariants}
-                      animate={focusedField === "timeline" ? "focus" : "blur"}
-                      className="relative"
-                    >
-                      <input
-                        type="text"
-                        name="timeline"
-                        value={formData.timeline}
-                        onChange={handleChange}
-                        onFocus={() => setFocusedField("timeline")}
-                        onBlur={() => setFocusedField(null)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                        placeholder="e.g. 6 months"
-                      />
-                    </motion.div>
-                  </div>
-                </motion.div>
-
-                {/* Title */}
-                <motion.div variants={itemVariants}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title
-                  </label>
-                  <motion.div
-                    variants={inputFocusVariants}
-                    animate={focusedField === "title" ? "focus" : "blur"}
-                    className="relative"
-                  >
-                    <input
-                      type="text"
-                      name="title"
-                      value={formData.title}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField("title")}
-                      onBlur={() => setFocusedField(null)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                      placeholder="e.g. 3 Bedroom Duplex JV in Lekki"
-                    />
-                  </motion.div>
-                </motion.div>
-
-                {/* Request Type */}
-                <motion.div variants={itemVariants}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Request Type <span className="text-red-500">*</span>
-                  </label>
-                  <motion.div
-                    variants={inputFocusVariants}
-                    animate={focusedField === "requestType" ? "focus" : "blur"}
-                    className="relative"
-                  >
-                    <select
-                      name="requestType"
-                      value={formData.requestType}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField("requestType")}
-                      onBlur={() => setFocusedField(null)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                    >
-                      <option value="land">Land</option>
-                      <option value="development">Development</option>
-                      <option value="partnership">Partnership</option>
-                    </select>
-                  </motion.div>
-                </motion.div>
-
-                {formData.requestType === "development" && (
-                  <motion.div variants={itemVariants}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Development Type
-                    </label>
-                    <motion.div
-                      variants={inputFocusVariants}
-                      animate={focusedField === "developmentType" ? "focus" : "blur"}
-                      className="relative"
-                    >
-                      <select
-                        name="developmentType"
-                        value={formData.developmentType}
-                        onChange={handleChange}
-                        onFocus={() => setFocusedField("developmentType")}
-                        onBlur={() => setFocusedField(null)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                      >
-                        <option value="">Select development type</option>
-                        <option value="residential">Residential</option>
-                        <option value="commercial">Commercial</option>
-                        <option value="industrial">Industrial</option>
-                        <option value="agricultural">Agricultural</option>
-                      </select>
-                    </motion.div>
-                  </motion.div>
-                )}
-
-                {formData.requestType === "partnership" && (
-                  <motion.div variants={itemVariants}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Partnership Type
-                    </label>
-                    <motion.div
-                      variants={inputFocusVariants}
-                      animate={focusedField === "partnershipType" ? "focus" : "blur"}
-                      className="relative"
-                    >
-                      <select
-                        name="partnershipType"
-                        value={formData.partnershipType}
-                        onChange={handleChange}
-                        onFocus={() => setFocusedField("partnershipType")}
-                        onBlur={() => setFocusedField(null)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                      >
-                        <option value="">Select partnership type</option>
-                        <option value="mandate">Mandate</option>
-                        <option value="lawyer">Lawyer</option>
-                        <option value="property_consultant">Property Consultant</option>
-                        <option value="building_expert">Building Expert</option>
-                      </select>
-                    </motion.div>
-                  </motion.div>
-                )}
-
-                {formData.requestType === "land" && (
-                  <motion.div
-                    variants={itemVariants}
-                    className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                  >
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Land Size
-                      </label>
-                      <motion.div
-                        variants={inputFocusVariants}
-                        animate={focusedField === "landSize" ? "focus" : "blur"}
-                        className="relative"
-                      >
-                        <input
-                          type="text"
-                          name="landSize"
-                          value={formData.landSize}
-                          onChange={handleChange}
-                          onFocus={() => setFocusedField("landSize")}
-                          onBlur={() => setFocusedField(null)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                          placeholder="e.g. 500 sqm"
-                        />
-                      </motion.div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Land Value
-                      </label>
-                      <motion.div
-                        variants={inputFocusVariants}
-                        animate={focusedField === "landValue" ? "focus" : "blur"}
-                        className="relative"
-                      >
-                        <input
-                          type="text"
-                          name="landValue"
-                          value={formData.landValue}
-                          onChange={handleChange}
-                          onFocus={() => setFocusedField("landValue")}
-                          onBlur={() => setFocusedField(null)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                          placeholder="e.g. ₦100,000,000"
-                        />
-                      </motion.div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Housing Proposal
-                      </label>
-                      <motion.div
-                        variants={inputFocusVariants}
-                        animate={focusedField === "housingProposal" ? "focus" : "blur"}
-                        className="relative"
-                      >
-                        <select
-                          name="housingProposal"
-                          value={formData.housingProposal}
-                          onChange={handleChange}
-                          onFocus={() => setFocusedField("housingProposal")}
-                          onBlur={() => setFocusedField(null)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                        >
-                          <option value="">Select proposal</option>
-                          <option value="apartment">Apartment</option>
-                          <option value="duplex">Duplex</option>
-                          <option value="maisonette">Maisonette</option>
-                          <option value="bungalows">Bungalows</option>
-                          <option value="condos">Condos</option>
-                        </select>
-                      </motion.div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Title Document
-                      </label>
-                      <motion.div
-                        variants={inputFocusVariants}
-                        animate={focusedField === "titleDocument" ? "focus" : "blur"}
-                        className="relative"
-                      >
-                        <select
-                          name="titleDocument"
-                          value={formData.titleDocument}
-                          onChange={handleChange}
-                          onFocus={() => setFocusedField("titleDocument")}
-                          onBlur={() => setFocusedField(null)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                        >
-                          <option value="">Select document type</option>
-                          <option value="c_of_o">C of O</option>
-                          <option value="governors_consent">Governor's Consent</option>
-                          <option value="deed_of_assignment">Deed</option>
-                          <option value="excision">Excision</option>
-                          <option value="gazzette">Gazzette</option>
-                        </select>
-                      </motion.div>
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Sharing Formula
-                      </label>
-                      <motion.div
-                        variants={inputFocusVariants}
-                        animate={focusedField === "sharingFormula" ? "focus" : "blur"}
-                        className="relative"
-                      >
-                        <select
-                          name="sharingFormula"
-                          value={formData.sharingFormula}
-                          onChange={handleChange}
-                          onFocus={() => setFocusedField("sharingFormula")}
-                          onBlur={() => setFocusedField(null)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400"
-                        >
-                          <option value="">Select sharing formula</option>
-                          <option value="50_50">50% / 50%</option>
-                          <option value="60_40">60% / 40%</option>
-                          <option value="70_30">70% / 30%</option>
-                        </select>
-                      </motion.div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Description */}
-                <motion.div variants={itemVariants}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description <span className="text-red-500">*</span>
-                  </label>
-                  <motion.div
-                    variants={inputFocusVariants}
-                    animate={focusedField === "description" ? "focus" : "blur"}
-                    className="relative"
-                  >
-                    <textarea
-                      name="description"
-                      required
-                      rows={5}
-                      value={formData.description}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField("description")}
-                      onBlur={() => setFocusedField(null)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400 resize-none"
-                      placeholder="Tell us about your project or opportunity..."
-                    />
-                  </motion.div>
-                </motion.div>
-
-                {/* File Upload */}
-                <motion.div variants={itemVariants}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Supporting Documents (Optional)
-                  </label>
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl">
-                    <div className="space-y-1 text-center">
-                      <label htmlFor="file-upload">
-                        <FiUpload className="mx-auto h-12 w-12 text-gray-400 hover:cursor-pointer"/>
-                      </label>
-                      <div className="flex text-sm text-gray-600 justify-center">
-                        <label
-                          htmlFor="file-upload"
-                          className="relative cursor-pointer bg-white rounded-md font-medium text-yellow-600 hover:text-yellow-500"
-                        >
-                          <span>Upload files</span>
-                          <input
-                            id="file-upload"
-                            name="document"
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            className="sr-only"
-                            onChange={handleFileChange}
-                          />
-                        </label>
-                        <p className="pl-1">or drag and drop</p>
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        PDF, DOC, JPG, PNG up to 10MB
-                      </p>
-                    </div>
-                  </div>
-
-                  {formData.files.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      <p className="text-sm font-medium text-gray-700">
-                        Selected files:
-                      </p>
-                      <ul className="space-y-2">
-                        {formData.files.map((file, index) => (
-                          <li
-                            key={index}
-                            className="flex items-center justify-between bg-gray-50 p-2 rounded-lg"
-                          >
-                            <span className="text-sm text-gray-600 truncate max-w-xs">
-                              {file.name}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(index)}
-                              className="text-gray-400 hover:text-red-500"
-                            >
-                              <FiX className="w-5 h-5" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </motion.div>
-
-                {/* Submit Button */}
-                <motion.div variants={itemVariants} className="pt-2">
-                  {error && (
-                    <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">
-                      {error}
-                    </div>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`w-full flex items-center justify-center px-6 py-4 border border-transparent rounded-xl text-base font-medium text-white bg-yellow-500 hover:bg-yellow-600 focus:outline-none hover:cursor-pointer focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors duration-200 ${
-                      isSubmitting ? "opacity-70 cursor-not-allowed bg-gray-800" : ""
-                    }`}
-                  >
-                    {isSubmitting ? (
-                      <span className="flex items-center">
-                        <Spinner />
-                      </span>
-                    ) : (
-                      <span className="flex items-center">
-                        Submit Request
-                        <FiArrowRight className="ml-2 w-5 h-5" />
-                      </span>
-                    )}
-                  </button>
-                </motion.div>
-              </div>
-            </form>
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 pt-12 sm:px-6 lg:grid-cols-[1fr_20rem] lg:px-8">
+        {!isAuthenticated ? (
+          <div className="rounded-2xl border border-line bg-ivory p-8 text-center lg:col-span-2">
+            <h2 className="font-display text-2xl text-ink">Log in to submit a request</h2>
+            <p className="mx-auto mt-2 max-w-md text-muted">You&apos;ll need an account so we can keep you updated and you can track your request.</p>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link href="/login" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white hover:bg-ink/85">
+                Log in
+              </Link>
+              <Link href="/register" className="rounded-full border border-line bg-white px-6 py-3 text-sm font-bold text-ink hover:border-ink">
+                Create an account
+              </Link>
+            </div>
           </div>
-        </motion.div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <section>
+              <h2 className="font-display text-2xl text-ink">1. What kind of request?</h2>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Request type">
+                {kinds.map((kind) => {
+                  const active = kind.types.includes(formData.requestType);
+                  return (
+                    <button
+                      key={kind.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => !active && setFormData((prev) => ({ ...prev, requestType: kind.types[0]! }))}
+                      className={cx(
+                        "rounded-2xl border p-5 text-left transition",
+                        active ? "border-gold bg-gold-soft/40 ring-2 ring-gold/30" : "border-line bg-white hover:border-gray-400",
+                      )}
+                    >
+                      <span className="font-bold text-ink">{kind.label}</span>
+                      <span className="mt-1 block text-sm text-muted">{kind.hint}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
-        <motion.div
-          className="mt-12 text-center text-sm text-gray-500"
-          variants={itemVariants}
-        >
-          <p>
-            Have questions?{" "}
-            <Link
-              href="/contact"
-              className="text-yellow-600 hover:text-yellow-700 font-medium"
-            >
-              Contact our team
-            </Link>
-          </p>
-        </motion.div>
-      </motion.div>
-    </div>
+              {formData.requestType === "land" || formData.requestType === "purchase" ? (
+                <div className="mt-4 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Offering or buying">
+                  {([
+                    ["land", "I have land or property to offer", "For a joint venture or a sale."],
+                    ["purchase", "I want to buy", "Tell us what you're looking for and your budget."],
+                  ] as const).map(([type, label, hint]) => (
+                    <label
+                      key={type}
+                      className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-white px-4 py-3 has-checked:border-gold has-checked:bg-gold-soft/40"
+                    >
+                      <input
+                        type="radio"
+                        name="landIntent"
+                        checked={formData.requestType === type}
+                        onChange={() => setFormData((prev) => ({ ...prev, requestType: type }))}
+                        className="mt-1 accent-[#c9a24a]"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-ink">{label}</span>
+                        <span className="block text-xs text-muted">{hint}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+
+            <section className="rounded-2xl border border-line p-6 sm:p-8">
+              <h2 className="font-display text-2xl text-ink">2. About the request</h2>
+              <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                <Field label="Title" htmlFor="title" className="sm:col-span-2" hint="A short headline, like a listing title.">
+                  <input
+                    id="title"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    className={inputClass}
+                    placeholder={formData.requestType === "purchase" ? "e.g. Looking for a 4-bedroom duplex in Lekki" : "e.g. 3-bedroom duplex JV in Lekki"}
+                  />
+                </Field>
+
+                {formData.requestType === "development" ? (
+                  <Field label="Development type" htmlFor="developmentType">
+                    <Select id="developmentType" name="developmentType" value={formData.developmentType} onChange={handleChange} options={developmentTypes} placeholder="Select development type" />
+                  </Field>
+                ) : null}
+                {formData.requestType === "purchase" ? (
+                  <>
+                    <Field label="What do you want to buy?" htmlFor="propertyWanted">
+                      <Select id="propertyWanted" name="propertyWanted" value={formData.propertyWanted} onChange={handleChange} options={propertiesWanted} placeholder="Select property type" />
+                    </Field>
+                    <Field label="How will you pay?" htmlFor="paymentMethod">
+                      <Select id="paymentMethod" name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} options={paymentMethods} placeholder="Select payment method" />
+                    </Field>
+                  </>
+                ) : null}
+                {formData.requestType === "partnership" ? (
+                  <Field label="Who are you looking for?" htmlFor="partnershipType">
+                    <Select id="partnershipType" name="partnershipType" value={formData.partnershipType} onChange={handleChange} options={partnershipTypes} placeholder="Select partnership type" />
+                  </Field>
+                ) : null}
+
+                <Field label={formData.requestType === "purchase" ? "Preferred location" : "Location"} htmlFor="location">
+                  <input id="location" name="location" value={formData.location} onChange={handleChange} className={inputClass} placeholder="Area, city and state" />
+                </Field>
+                <Field label={formData.requestType === "land" ? "Asking value (₦)" : "Budget (₦)"} htmlFor="budget">
+                  <MoneyInput id="budget" name="budget" value={formData.budget} onChange={(value) => setValue("budget", value)} placeholder="e.g. 500,000,000" />
+                </Field>
+                <Field label={formData.requestType === "purchase" ? "When do you want to buy?" : "Timeline"} htmlFor="timeline">
+                  <input
+                    id="timeline"
+                    name="timeline"
+                    value={formData.timeline}
+                    onChange={handleChange}
+                    className={inputClass}
+                    placeholder={formData.requestType === "purchase" ? "e.g. within 3 months" : "e.g. 18 months"}
+                  />
+                </Field>
+
+                {formData.requestType === "land" ? (
+                  <>
+                    <Field label="Land size" htmlFor="landSize">
+                      <input id="landSize" name="landSize" value={formData.landSize} onChange={handleChange} className={inputClass} placeholder="e.g. 600 sqm" />
+                    </Field>
+                    <Field label="Land value (₦)" htmlFor="landValue">
+                      <MoneyInput id="landValue" name="landValue" value={formData.landValue} onChange={(value) => setValue("landValue", value)} placeholder="e.g. 100,000,000" />
+                    </Field>
+                    <Field label="Title document" htmlFor="titleDocument">
+                      <Select id="titleDocument" name="titleDocument" value={formData.titleDocument} onChange={handleChange} options={titleDocuments} placeholder="Select document type" />
+                    </Field>
+                    <Field label="What could be built?" htmlFor="housingProposal">
+                      <Select id="housingProposal" name="housingProposal" value={formData.housingProposal} onChange={handleChange} options={housingProposals} placeholder="Select proposal" />
+                    </Field>
+                    <Field label="Sharing formula" htmlFor="sharingFormula" hint="Landowner / developer">
+                      <Select id="sharingFormula" name="sharingFormula" value={formData.sharingFormula} onChange={handleChange} options={sharingFormulas} placeholder="Select sharing formula" />
+                    </Field>
+                    <YesNo
+                      name="sharingNegotiable"
+                      legend="Is the sharing formula negotiable?"
+                      value={formData.sharingNegotiable}
+                      onChange={(value) => setValue("sharingNegotiable", value)}
+                      yes="Negotiable"
+                      no="Fixed"
+                    />
+                    <YesNo
+                      name="hasPremium"
+                      legend="Is there a premium?"
+                      value={formData.hasPremium}
+                      onChange={(value) => setValue("hasPremium", value)}
+                      yes="Yes"
+                      no="No premium"
+                      hint="An upfront payment from the developer to the landowner."
+                    />
+                    {formData.hasPremium === "yes" ? (
+                      <Field label="Premium amount (₦)" htmlFor="premium" required>
+                        <MoneyInput id="premium" value={formData.premium} onChange={(value) => setValue("premium", value)} placeholder="e.g. 25,000,000" />
+                      </Field>
+                    ) : null}
+                  </>
+                ) : null}
+
+                <Field label="Description" htmlFor="description" required className="sm:col-span-2">
+                  <textarea
+                    id="description"
+                    name="description"
+                    rows={6}
+                    required
+                    value={formData.description}
+                    onChange={handleChange}
+                    className={inputClass}
+                    placeholder={
+                      formData.requestType === "purchase"
+                        ? "Describe what you're looking for: size, number of rooms, must-haves, anything you'd rule out."
+                        : "Tell us about the land, project or opportunity, and what you'd like from a partner."
+                    }
+                  />
+                </Field>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-line p-6 sm:p-8">
+              <h2 className="font-display text-2xl text-ink">3. Your contact details</h2>
+              <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                <Field label="Full name" htmlFor="fullName" required>
+                  <input id="fullName" name="fullName" autoComplete="name" required value={formData.fullName} onChange={handleChange} className={inputClass} />
+                </Field>
+                <Field label="Email" htmlFor="email" required>
+                  <input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleChange} className={inputClass} />
+                </Field>
+                <Field label="Phone number" htmlFor="phoneNumber">
+                  <input id="phoneNumber" name="phoneNumber" type="tel" autoComplete="tel" value={formData.phoneNumber} onChange={handleChange} className={inputClass} placeholder="+234" />
+                </Field>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-line p-6 sm:p-8">
+              <h2 className="font-display text-2xl text-ink">4. Supporting documents</h2>
+              <p className="mt-1 text-sm text-muted">Optional. Title documents, survey plans or photos help us review faster.</p>
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={onDrop}
+                className={cx("mt-5 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors", dragging ? "border-gold bg-gold-soft/40" : "border-line")}
+              >
+                <FiUploadCloud aria-hidden="true" className="mx-auto h-8 w-8 text-gold-deep" />
+                <p className="mt-3 font-semibold text-ink">Drag files here</p>
+                <p className="mt-1 text-xs text-muted">PDF, DOC, JPG or PNG, up to {MAX_FILE_MB} MB each</p>
+                <button type="button" onClick={() => fileInput.current?.click()} className="mt-4 rounded-full border border-line bg-white px-5 py-2 text-sm font-semibold text-ink hover:border-ink">
+                  Choose files
+                </button>
+                <input ref={fileInput} type="file" multiple hidden accept=".pdf,.doc,.docx,image/*" onChange={(e) => addFiles(e.target.files)} />
+              </div>
+              {formData.files.length ? (
+                <ul className="mt-4 space-y-2">
+                  {formData.files.map((file, index) => (
+                    <li key={file.name + index} className="flex items-center gap-3 rounded-xl border border-line px-4 py-3 text-sm">
+                      <FiFileText aria-hidden="true" className="shrink-0 text-gold-deep" />
+                      <span className="min-w-0 flex-1 truncate text-ink">{file.name}</span>
+                      <span className="shrink-0 text-xs text-muted">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
+                      <button type="button" onClick={() => removeFile(index)} aria-label={`Remove ${file.name}`} className="grid h-7 w-7 place-items-center rounded-full text-muted hover:bg-red-50 hover:text-red-700">
+                        <FiX aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+
+            {error ? <Alert tone="error">{error}</Alert> : null}
+
+            <div className="sm:w-72">
+              <SubmitButton loading={isSubmitting} loadingText="Submitting…">
+                Submit request <FiArrowRight aria-hidden="true" />
+              </SubmitButton>
+            </div>
+          </form>
+        )}
+
+        {isAuthenticated ? (
+          <aside className="self-start rounded-2xl bg-ink p-7 text-white lg:sticky lg:top-28">
+            <p className="eyebrow text-gold">What happens next</p>
+            <ol className="mt-5 space-y-5 text-sm">
+              {[
+                ["We review it", "Our team checks the details and any documents within 24–48 hours."],
+                ["We source it", "We search our network of landowners, developers and investors for a match."],
+                ["Members respond", "Approved requests appear on Browse requests, where members can send enquiries. We make the introduction."],
+              ].map(([title, body], index) => (
+                <li key={title} className="flex gap-4">
+                  <span className="font-display text-2xl leading-none text-gold">{index + 1}</span>
+                  <span>
+                    <span className="block font-semibold">{title}</span>
+                    <span className="mt-0.5 block text-gray-400">{body}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </aside>
+        ) : null}
+      </div>
+    </main>
   );
 }
