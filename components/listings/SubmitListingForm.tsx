@@ -31,6 +31,8 @@ const emptyForm = {
   /** Digits only. */
   premium: "",
   duration: "",
+  /** Optional: "no" (the default) saves no proposal. */
+  hasProposal: "no" as YesNoValue,
   proposal: "",
   area: "",
   city: "",
@@ -53,7 +55,7 @@ function validate(form: FormState, images: string[], documents: SubmittedDocumen
   if (!form.title.trim()) errors.title = "Give the property a short title.";
   if (!(Number(form.sizeSqm) > 0)) errors.sizeSqm = "Enter the size in square metres.";
   if (!(Number(form.price) > 0)) errors.price = "Enter an amount in naira.";
-  if (form.dealType === "jv" && !form.proposal.trim()) errors.proposal = "What could a developer build here?";
+  if (form.dealType === "jv" && form.hasProposal === "yes" && !form.proposal.trim()) errors.proposal = "Describe the proposal, or choose No.";
   if (form.dealType === "jv" && !form.sharingNegotiable) errors.sharingNegotiable = "Choose negotiable or fixed.";
   if (form.dealType === "jv" && !form.hasPremium) errors.hasPremium = "Choose yes or no.";
   if (form.dealType === "jv" && form.hasPremium === "yes" && !(Number(form.premium) > 0)) errors.premium = "Enter the premium in naira.";
@@ -83,6 +85,7 @@ function formFromSubmission(submission: ListingSubmission): FormState {
     hasPremium: premiumAnswer(listing.jv?.premium),
     premium: listing.jv?.premium ? String(listing.jv.premium) : "",
     duration: listing.jv?.duration ?? "",
+    hasProposal: listing.jv?.proposal ? "yes" : "no",
     proposal: listing.jv?.proposal ?? "",
     area: listing.area,
     city: listing.city,
@@ -219,7 +222,7 @@ export function SubmitListingForm() {
               sharingFormula: form.sharingFormula,
               sharingNegotiable: form.sharingNegotiable ? form.sharingNegotiable === "yes" : undefined,
               premium: form.hasPremium === "no" ? 0 : form.hasPremium === "yes" && Number(form.premium) > 0 ? Number(form.premium) : undefined,
-              proposal: form.proposal.trim(),
+              proposal: form.hasProposal === "yes" ? form.proposal.trim() : "",
               duration: form.duration.trim(),
             }
           : undefined,
@@ -423,9 +426,22 @@ export function SubmitListingForm() {
             <Field label="Build period" htmlFor="duration">
               <input id="duration" value={form.duration} onChange={onText("duration")} placeholder="e.g. 24 months" className={inputClass} />
             </Field>
-            <Field label="What could be built?" htmlFor="proposal" required error={errors.proposal} className="sm:col-span-2">
-              <input id="proposal" value={form.proposal} onChange={onText("proposal")} placeholder="e.g. 12 units of 3-bed apartments" className={inputClass} />
-            </Field>
+            <div className="grid gap-5 sm:col-span-2 sm:grid-cols-2">
+              <YesNo
+                name="hasProposal"
+                legend="Is there a proposal?"
+                value={form.hasProposal}
+                onChange={(value) => set("hasProposal", value)}
+                yes="Yes"
+                no="No"
+                hint="Optional. What you'd like a developer to build."
+              />
+              {form.hasProposal === "yes" ? (
+                <Field label="Proposal" htmlFor="proposal" required error={errors.proposal}>
+                  <input id="proposal" value={form.proposal} onChange={onText("proposal")} placeholder="e.g. 12 units of 3-bed apartments" className={inputClass} />
+                </Field>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </Section>

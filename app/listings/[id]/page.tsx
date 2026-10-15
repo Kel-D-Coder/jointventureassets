@@ -104,8 +104,8 @@ export default async function ListingDetailPage({ params }: Props) {
                     </div>
                   ) : null}
                   <div>
-                    <dt className="text-sm text-gray-400">Proposed development</dt>
-                    <dd className="mt-1 font-semibold">{listing.jv.proposal}</dd>
+                    <dt className="text-sm text-gray-400">Proposal</dt>
+                    <dd className="mt-1 font-semibold">{listing.jv.proposal || "No"}</dd>
                   </div>
                   <div>
                     <dt className="text-sm text-gray-400">Build period</dt>
