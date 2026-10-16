@@ -27,13 +27,13 @@ async function findByEmail(email: string): Promise<StoredAccount | undefined> {
   return (await listItems()).find((item): item is StoredAccount => item.kind === "account" && item.email.toLowerCase() === email);
 }
 
-function newAccount(input: Pick<StoredAccount, "fullName" | "email" | "password" | "role" | "category">): StoredAccount {
+function newAccount(input: Pick<StoredAccount, "fullName" | "email" | "password" | "role" | "category"> & { phoneNumber?: string }): StoredAccount {
   const now = new Date().toISOString();
   return {
     ...input,
     id: `usr-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
     kind: "account",
-    phoneNumber: "",
+    phoneNumber: input.phoneNumber ?? "",
     profile: {},
     documents: {},
     profileCompleted: false,
@@ -73,12 +73,14 @@ export async function POST(request: Request) {
       if (!filled(body.fullName) || !email || typeof body.password !== "string" || body.password.length < 8) {
         return json({ message: "Please give your name, email and a password of at least 8 characters." }, 400);
       }
+      if (!filled(body.phoneNumber)) return json({ message: "Please give a phone number we can reach you on." }, 400);
       if (!ROLES.includes(role)) return json({ message: "Please choose whether you're a landowner, investor or buyer." }, 400);
       if (await findByEmail(email)) return json({ message: "An account with this email already exists." }, 409);
       const account = newAccount({
         fullName: String(body.fullName).trim(),
         email,
         password: body.password,
+        phoneNumber: String(body.phoneNumber).trim(),
         role,
         category: typeof body.category === "string" && body.category ? body.category : "Individual",
       });

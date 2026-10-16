@@ -46,6 +46,7 @@ export async function loginWithGoogle(): Promise<AuthResponse> {
 export async function register(input: {
   fullName: string;
   email: string;
+  phoneNumber: string;
   password: string;
   role: string;
   category: string;

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiArrowRight } from "react-icons/fi";
-import { updateProfile } from "@/lib/api/auth";
+import { getMyAccount, updateProfile } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/mock";
 import { useAppSelector } from "@/hooks/hooks";
 import { AuthShell } from "@/components/auth/AuthShell";
@@ -30,6 +30,14 @@ export default function CompleteProfileForm({ role = "Investor", category = "Coo
   const [error, setError] = useState<string | null>(null);
 
   const isInvestor = role === "Investor";
+
+  // The phone number given at sign-up is filled in already.
+  useEffect(() => {
+    if (!userId) return;
+    getMyAccount(userId)
+      .then((account) => setPhoneNumber((current) => current || account.phoneNumber))
+      .catch(() => undefined);
+  }, [userId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -23,8 +23,11 @@ const FILE = process.env.VERCEL
  */
 function upgrade(items: InboxItem[]): { items: InboxItem[]; changed: boolean } {
   let changed = false;
-  if (!items.some((item) => item.kind === "account")) {
-    items.push(...structuredClone(seedAccounts));
+  // Demo members added since this inbox file was first saved.
+  const known = new Set(items.map((item) => item.id));
+  const missing = seedAccounts.filter((account) => !known.has(account.id));
+  if (missing.length) {
+    items.push(...structuredClone(missing));
     changed = true;
   }
   for (const seed of seedSubmissions) {

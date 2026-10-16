@@ -86,6 +86,16 @@ const seeds: Seed[] = [
     createdAt: "2026-10-10T10:00:00+01:00", lastActiveAt: "2026-10-12T09:40:00+01:00",
   },
   {
+    id: "usr-13", fullName: "Olumide Johnson", email: "olumide.j@example.com", phoneNumber: "+234 809 201 3344", role: "Landowner", category: "Individual", status: "active",
+    profile: { landLocation: "Ijede, Ikorodu", landSize: "300 sqm", documentationStatus: "In Progress", preferredPartnershipType: "Joint Venture", landDescription: "Dry half-plot on a tarred road near the Ijede jetty." },
+    createdAt: "2026-10-08T15:20:00+01:00", lastActiveAt: "2026-10-12T13:10:00+01:00",
+  },
+  {
+    id: "usr-14", fullName: "Grace Etim", email: "grace.etim@example.com", phoneNumber: "+234 802 330 1122", role: "Landowner", category: "Individual", status: "active",
+    profile: { landLocation: "GRA Phase 2, Port Harcourt", landSize: "650 sqm", documentationStatus: "Fully Documented", preferredPartnershipType: "Outright Sale", landDescription: "Four-bedroom detached house on a corner plot." },
+    createdAt: "2026-10-06T11:00:00+01:00", lastActiveAt: "2026-10-11T16:45:00+01:00",
+  },
+  {
     id: "usr-admin", fullName: "JVA Admin", email: "admin@jointventureassets.com", password: "admin123", phoneNumber: "", role: "Admin", category: "Staff", status: "active",
     profile: {}, createdAt: "2026-06-01T09:00:00+01:00", lastActiveAt: "2026-10-12T09:00:00+01:00",
   },

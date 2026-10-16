@@ -27,6 +27,7 @@ export default function RegisterForm({ role = "Buyer", category = "" }: Register
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
     role,
@@ -86,6 +87,9 @@ export default function RegisterForm({ role = "Buyer", category = "" }: Register
         </Field>
         <Field label="Email address" htmlFor="email" required>
           <input type="email" id="email" name="email" autoComplete="email" value={formData.email} onChange={handleChange} className={inputClass} required />
+        </Field>
+        <Field label="Phone number" htmlFor="phoneNumber" required hint="We'll call you about matches.">
+          <input type="tel" id="phoneNumber" name="phoneNumber" autoComplete="tel" value={formData.phoneNumber} onChange={handleChange} className={inputClass} placeholder="+234" required />
         </Field>
         <Field label="Password" htmlFor="password" required hint={`At least ${MIN_PASSWORD} characters.`}>
           <PasswordInput id="password" name="password" autoComplete="new-password" value={formData.password} onChange={handleChange} required />
