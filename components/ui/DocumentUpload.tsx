@@ -16,6 +16,7 @@ export function DocumentUpload({
   onChange,
   error,
   imagesOnly = false,
+  upload,
 }: {
   id: string;
   label: string;
@@ -26,6 +27,8 @@ export function DocumentUpload({
   error?: string;
   /** Accept only PNG or JPG, e.g. a letterhead that gets printed on a document. */
   imagesOnly?: boolean;
+  /** If provided, the file is uploaded immediately on selection and the returned URL stored. */
+  upload?: (file: File) => Promise<string>;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState("");
@@ -41,7 +44,12 @@ export function DocumentUpload({
     }
     setReading(true);
     try {
-      onChange(await toDocument(file));
+      if (upload) {
+        const url = await upload(file);
+        onChange({ name: file.name, type: file.type, size: file.size, url });
+      } else {
+        onChange(await toDocument(file));
+      }
     } catch (caught) {
       setProblem((caught as Error).message);
     } finally {

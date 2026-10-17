@@ -35,7 +35,7 @@ export class ApiError extends Error {}
 
 /** Turns anything thrown by an API call into a sentence for the user. */
 export function errorMessage(caught: unknown, fallback: string): string {
-  return caught instanceof ApiError ? caught.message : fallback;
+  return caught instanceof Error ? caught.message : fallback;
 }
 
 function freshDb(): Db {

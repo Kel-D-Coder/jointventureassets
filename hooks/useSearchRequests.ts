@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAppSelector } from "@/hooks/hooks";
-import { searchRequests as searchRequestsApi } from "@/lib/api/requests";
+import { getAcceptedRequests } from "@/lib/api/requests";
 import { errorMessage } from "@/lib/api/mock";
 import type { PartnerRequest, RequestType } from "@/types";
 
@@ -21,7 +21,7 @@ export const useSearchRequests = (): UseSearchRequestsResult => {
     try {
       setLoading(true);
       setError(null);
-      setData(await searchRequestsApi(token, type as RequestType | undefined));
+      setData(await getAcceptedRequests(token, type as RequestType | undefined));
     } catch (err: unknown) {
       setError(errorMessage(err, "An error occurred while fetching requests"));
     } finally {

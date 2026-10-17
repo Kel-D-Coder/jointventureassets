@@ -115,11 +115,9 @@ export default function Navbar() {
                     <Link href="/dashboard/profile" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-ivory">
                       <FiSettings aria-hidden="true" /> My profile
                     </Link>
-                    {user.role === "Admin" && (
-                      <a href={ADMIN_DASHBOARD_URL} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-ivory">
-                        <FiSettings aria-hidden="true" /> Admin dashboard
-                      </a>
-                    )}
+                    <Link href="/dashboard/admin" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-ivory">
+                      <FiSettings aria-hidden="true" /> Listing approvals
+                    </Link>
                     <button type="button" onClick={handleLogout} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-red-700 hover:bg-red-50">
                       <FiLogOut aria-hidden="true" /> Log out
                     </button>
@@ -188,11 +186,9 @@ export default function Navbar() {
                   <Link href="/dashboard" className="block rounded-xl bg-ink px-4 py-3 text-center font-semibold text-white">
                     My dashboard
                   </Link>
-                  {user.role === "Admin" && (
-                    <a href={ADMIN_DASHBOARD_URL} target="_blank" rel="noreferrer" className="block rounded-xl border border-line px-4 py-3 text-center font-semibold text-ink">
-                      Admin dashboard
-                    </a>
-                  )}
+                  <Link href="/dashboard/admin" className="block rounded-xl border border-line px-4 py-3 text-center font-semibold text-ink">
+                    Listing approvals
+                  </Link>
                   <button type="button" onClick={handleLogout} className="block w-full rounded-xl px-4 py-3 text-center font-semibold text-red-700">
                     Log out
                   </button>

@@ -103,7 +103,7 @@ function formFromSubmission(submission: ListingSubmission): FormState {
 const timeFormat = new Intl.DateTimeFormat("en-NG", { hour: "numeric", minute: "2-digit" });
 
 export function SubmitListingForm() {
-  const user = useAppSelector((state) => state.auth.user);
+  const { user, token } = useAppSelector((state) => state.auth);
   const router = useRouter();
   const pathname = usePathname();
   const draftParam = useSearchParams().get("draft");
@@ -125,8 +125,8 @@ export function SubmitListingForm() {
 
   // Reopen a saved draft from ?draft=…
   useEffect(() => {
-    if (!draftParam) return;
-    getSubmission(draftParam)
+    if (!draftParam || !token) return;
+    getSubmission(draftParam, token)
       .then((submission) => {
         if (submission.status !== "draft") {
           setAlreadySubmitted(submission);
@@ -230,7 +230,6 @@ export function SubmitListingForm() {
     },
   });
 
-  /** Saves whatever is filled in. Only an email is needed, so the draft can be found again. */
   const saveDraft = async () => {
     setErrors({});
     if (!form.email.trim()) {
@@ -238,10 +237,11 @@ export function SubmitListingForm() {
       setError("Add your email (in the last section) to save a draft.");
       return;
     }
+    if (!token) { setError("Log in to save a draft."); return; }
     setError("");
     setBusy("draft");
     try {
-      const saved = await saveSubmission(toInput(), { id: draftId ?? undefined, draft: true });
+      const saved = await saveSubmission(toInput(), { id: draftId ?? undefined, draft: true }, token);
       setDraftId(saved.id);
       setSavedAt(new Date());
       if (!draftId) router.replace(`${pathname}?draft=${saved.id}`, { scroll: false });
@@ -260,10 +260,11 @@ export function SubmitListingForm() {
       setError("Some details are missing. They're marked below. You can save a draft and finish later.");
       return;
     }
+    if (!token) { setError("Log in to submit a listing."); return; }
     setError("");
     setBusy("submit");
     try {
-      const saved = await saveSubmission(toInput(), { id: draftId ?? undefined, draft: false });
+      const saved = await saveSubmission(toInput(), { id: draftId ?? undefined, draft: false }, token);
       setSubmitted(saved);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (caught) {
@@ -274,10 +275,10 @@ export function SubmitListingForm() {
   };
 
   const discardDraft = async () => {
-    if (!draftId || !window.confirm("Delete this draft? This can't be undone.")) return;
+    if (!draftId || !token || !window.confirm("Delete this draft? This can't be undone.")) return;
     setBusy("delete");
     try {
-      await deleteSubmission(draftId);
+      await deleteSubmission(draftId, token);
       router.push(user ? "/dashboard" : "/listings");
     } catch (caught) {
       setError(errorMessage(caught, "Couldn't delete the draft."));
@@ -290,6 +291,19 @@ export function SubmitListingForm() {
       <div className="space-y-4" aria-busy="true">
         <div className="h-24 animate-pulse rounded-2xl bg-ivory" />
         <div className="h-96 animate-pulse rounded-2xl bg-ivory" />
+      </div>
+    );
+  }
+
+  if (!user || !token) {
+    return (
+      <div className="rounded-2xl border border-line bg-ivory p-10 text-center">
+        <h2 className="font-display text-2xl text-ink">Log in to list a property</h2>
+        <p className="mx-auto mt-2 max-w-md text-muted">You need an account to submit a listing and track its review status.</p>
+        <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+          <Link href="/login" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white hover:bg-ink/85">Log in</Link>
+          <Link href="/register" className="rounded-full border border-line bg-white px-6 py-3 text-sm font-bold text-ink hover:border-ink">Create an account</Link>
+        </div>
       </div>
     );
   }
@@ -513,12 +527,12 @@ export function SubmitListingForm() {
           active={dragging === "documents"}
           invalid={Boolean(errors.documents)}
           heading={busy === "files" ? "Preparing files…" : "Drag title documents here"}
-          note={`PDF, JPG or PNG, up to ${MAX_DOCUMENT_MB} MB each, ${MAX_DOCUMENTS} files at most.`}
+          note={`PDF, DOC, JPG or PNG — up to ${MAX_DOCUMENT_MB} MB each, ${MAX_DOCUMENTS} files at most.`}
           buttonLabel="Choose documents"
           disabled={busy === "files" || documents.length >= MAX_DOCUMENTS}
           onChoose={() => documentInput.current?.click()}
         />
-        <input ref={documentInput} type="file" accept="application/pdf,image/*" multiple hidden onChange={(event) => addDocuments(event.target.files)} />
+        <input ref={documentInput} type="file" accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*" multiple hidden onChange={(event) => addDocuments(event.target.files)} />
         {errors.documents ? <p className="mt-2 text-xs font-medium text-red-700">{errors.documents}</p> : null}
         {documents.length ? (
           <ul className="mt-4 space-y-2">
@@ -530,7 +544,7 @@ export function SubmitListingForm() {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-ink">{doc.name}</span>
                   <span className="text-xs text-muted">
-                    {doc.type === "application/pdf" ? "PDF" : "Image"} · {fileSize(doc.size)}
+                    {doc.type === "application/pdf" ? "PDF" : doc.type.includes("word") ? "DOC" : "Image"} · {fileSize(doc.size)}
                   </span>
                 </span>
                 <button

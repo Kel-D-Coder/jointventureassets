@@ -16,12 +16,20 @@ export function fileSize(bytes: number): string {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
+const ALLOWED_DOCUMENT_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+
 /**
- * Turns an uploaded PDF or image into a document record, or throws a sentence
- * explaining why it can't be used. With a real backend this becomes an upload.
+ * Turns an uploaded PDF, Word document or image into a document record, or
+ * throws a sentence explaining why it can't be used.
  */
 export async function toDocument(file: File): Promise<SubmittedDocument> {
-  if (!(file.type === "application/pdf" || file.type.startsWith("image/"))) throw new Error(`${file.name} isn't a PDF or image.`);
+  if (!(ALLOWED_DOCUMENT_TYPES.has(file.type) || file.type.startsWith("image/"))) {
+    throw new Error(`${file.name} isn't a PDF, Word document or image.`);
+  }
   if (file.size > MAX_DOCUMENT_MB * 1024 * 1024) throw new Error(`${file.name} is over ${MAX_DOCUMENT_MB} MB.`);
   return { name: file.name, type: file.type, size: file.size, url: await readAsDataUrl(file) };
 }

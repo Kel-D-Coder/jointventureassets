@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FiArrowRight } from "react-icons/fi";
+import { useAppSelector } from "@/hooks/hooks";
 import { sendContactMessage } from "@/lib/api/contact";
 import { errorMessage } from "@/lib/api/mock";
 import { Alert, Field, Select, SubmitButton, inputClass } from "@/components/ui/form";
@@ -18,6 +19,7 @@ const emptyForm = {
 const consultationTypes = ["General Inquiry", "Landowner Consultation", "Investor/Developer Consultation", "Buyer Consultation"];
 
 export default function ContactForm() {
+  const token = useAppSelector((state) => state.auth.token);
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -34,7 +36,7 @@ export default function ContactForm() {
       setLoading(true);
       setErrorMsg("");
       setSuccessMsg("");
-      const response = await sendContactMessage(formData);
+      const response = await sendContactMessage(formData, token);
       setSuccessMsg(response.message);
       setFormData(emptyForm);
     } catch (error: unknown) {

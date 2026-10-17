@@ -2,6 +2,9 @@ import { seedListings } from "@/lib/data/listings";
 import { ApiError, wait } from "@/lib/api/mock";
 import { sendEnquiry as sendInboxEnquiry } from "@/lib/api/inbox";
 import type { DealType, Listing, PropertyType } from "@/types";
+import type { ListingSubmission } from "@/lib/inbox/types";
+
+const BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? "";
 
 export type ListingSort = "newest" | "price_asc" | "price_desc" | "size_desc";
 
@@ -50,10 +53,20 @@ export async function getFeaturedListings(limit = 6): Promise<Listing[]> {
   return structuredClone(publicListings().filter((listing) => listing.featured).slice(0, limit));
 }
 
-/** GET /listings/{id} */
+/** GET /listings/{id} — tries the real backend first; returns null if not found or unreachable. */
 export async function getListing(id: string): Promise<Listing | null> {
-  await wait(150, 150);
-  return structuredClone(publicListings().find((listing) => listing.id === id) ?? null);
+  try {
+    const response = await fetch(`${BASE}/listings/${id}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error();
+    const body = await response.json();
+    return submissionToListing(body.listing as ListingSubmission);
+  } catch {
+    return null;
+  }
 }
 
 /** Up to three other listings of the same deal type, nearest first. */
@@ -62,6 +75,47 @@ export function similarListings(listing: Listing, limit = 3): Listing[] {
     .filter((other) => other.id !== listing.id && other.dealType === listing.dealType)
     .sort((a, b) => Number(b.state === listing.state) - Number(a.state === listing.state))
     .slice(0, limit);
+}
+
+/** Maps a backend ListingSubmission (approved) to the frontend Listing shape. */
+function submissionToListing(s: ListingSubmission): Listing {
+  return {
+    id: s.id,
+    title: s.listing.title,
+    dealType: s.listing.dealType as DealType,
+    propertyType: s.listing.propertyType as PropertyType,
+    area: s.listing.area,
+    city: s.listing.city,
+    state: s.listing.state,
+    sizeSqm: s.listing.sizeSqm,
+    price: s.listing.price,
+    titleDocument: s.listing.titleDocument,
+    description: s.listing.description,
+    highlights: s.listing.highlights,
+    images: s.listing.images,
+    jv: s.listing.jv ?? undefined,
+    ownerName: s.listing.ownerName,
+    status: "published",
+    featured: false,
+    verified: true,
+    views: 0,
+    enquiries: 0,
+    createdAt: s.createdAt,
+  };
+}
+
+/** GET /listings/approved — all approved listings from the real backend. Throws on network/server error. */
+export async function getApprovedListings(): Promise<Listing[]> {
+  const response = await fetch(`${BASE}/listings/approved`, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
+  }).catch(() => {
+    throw new Error("Couldn't reach the server.");
+  });
+
+  if (!response.ok) throw new Error(`Server error ${response.status}`);
+  const body = await response.json();
+  return ((body.listings ?? []) as ListingSubmission[]).map(submissionToListing);
 }
 
 /** Sends an enquiry about a listing to the shared demo inbox, where the admin dashboard picks it up. */

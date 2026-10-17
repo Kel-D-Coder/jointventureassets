@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FiSearch, FiX } from "react-icons/fi";
-import { filterListings, getListings, type ListingSort } from "@/lib/api/listings";
+import { filterListings, getApprovedListings, type ListingSort } from "@/lib/api/listings";
+import { Alert } from "@/components/ui/form";
 import { ListingCard, ListingCardSkeleton } from "@/components/listings/ListingCard";
 import { propertyTypeLabel } from "@/components/listings/labels";
 import { cx } from "@/lib/format";
@@ -50,10 +51,16 @@ export function ListingsExplorer() {
   const q = params.get("q") ?? "";
 
   const [listings, setListings] = useState<Listing[] | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [search, setSearch] = useState(q);
 
   useEffect(() => {
-    getListings().then(setListings);
+    getApprovedListings()
+      .then(setListings)
+      .catch((err: unknown) => {
+        setFetchError((err as Error).message ?? "Couldn't load listings.");
+        setListings([]);
+      });
   }, []);
 
   // Keep the box in step when the URL changes (back button, homepage search).
@@ -155,6 +162,8 @@ export function ListingsExplorer() {
         </div>
       </div>
 
+      {fetchError ? <Alert tone="error" className="mt-6">{fetchError} Showing demo listings instead.</Alert> : null}
+
       <div className="mt-6 flex min-h-8 flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted" aria-live="polite">
           {listings ? (
@@ -179,9 +188,13 @@ export function ListingsExplorer() {
         </div>
       ) : visible.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-dashed border-line px-6 py-16 text-center">
-          <p className="font-display text-2xl text-ink">No listings match</p>
+          <p className="font-display text-2xl text-ink">
+            {hasFilters ? "No listings match" : "No listings yet"}
+          </p>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-            Try a different location or deal type, or post a request with what you need. We&apos;ll source it, and members on the platform can respond.
+            {hasFilters
+              ? "Try a different location or deal type, or post a request with what you need. We’ll source it, and members on the platform can respond."
+              : "We’re reviewing submitted properties and will publish approved listings here soon. In the meantime, post a request and we’ll source a match for you."}
           </p>
           <a href="/submit-request" className="mt-6 inline-flex rounded-full bg-ink px-6 py-3 text-sm font-semibold text-white hover:bg-ink/85">
             Post a request

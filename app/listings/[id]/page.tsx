@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { FiArrowLeft, FiCheck, FiCheckCircle, FiMapPin } from "react-icons/fi";
-import { getListing, similarListings } from "@/lib/api/listings";
+import { getApprovedListings, getListing } from "@/lib/api/listings";
 import { DealBadge } from "@/components/listings/DealBadge";
 import { EnquiryForm } from "@/components/enquiries/EnquiryForm";
 import { ListingGallery } from "@/components/listings/ListingGallery";
@@ -26,7 +26,11 @@ export default async function ListingDetailPage({ params }: Props) {
   const listing = await getListing((await params).id);
   if (!listing) notFound();
 
-  const similar = similarListings(listing);
+  const all = await getApprovedListings().catch(() => []);
+  const similar = all
+    .filter((other) => other.id !== listing.id && other.dealType === listing.dealType)
+    .sort((a, b) => Number(b.state === listing.state) - Number(a.state === listing.state))
+    .slice(0, 3);
   const facts = [
     { label: listing.dealType === "jv" ? "Land value" : "Asking price", value: formatNaira(listing.price) },
     { label: "Size", value: formatSize(listing.sizeSqm) },

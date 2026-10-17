@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiArrowRight } from "react-icons/fi";
-import { getMyAccount, updateProfile } from "@/lib/api/auth";
+import { updateProfile } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/mock";
 import { useAppSelector } from "@/hooks/hooks";
 import { AuthShell } from "@/components/auth/AuthShell";
@@ -21,6 +21,7 @@ interface CompleteProfileFormProps {
 export default function CompleteProfileForm({ role = "Investor", category = "Cooperative" }: CompleteProfileFormProps) {
   const router = useRouter();
   const userId = useAppSelector((state) => state.auth.user?.id);
+  const token = useAppSelector((state) => state.auth.token);
   const fields = useMemo(() => profileFieldsFor(role, category), [role, category]);
   const [profile, setProfile] = useState<Record<string, string>>({});
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -31,13 +32,6 @@ export default function CompleteProfileForm({ role = "Investor", category = "Coo
 
   const isInvestor = role === "Investor";
 
-  // The phone number given at sign-up is filled in already.
-  useEffect(() => {
-    if (!userId) return;
-    getMyAccount(userId)
-      .then((account) => setPhoneNumber((current) => current || account.phoneNumber))
-      .catch(() => undefined);
-  }, [userId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +43,7 @@ export default function CompleteProfileForm({ role = "Investor", category = "Coo
     try {
       setLoading(true);
       setError(null);
-      await updateProfile(userId ?? "", { phoneNumber, profile, ...(isInvestor ? { documents } : {}) });
+      await updateProfile(token ?? "", { phoneNumber, profile, ...(isInvestor ? { documents } : {}) });
       router.push("/dashboard");
     } catch (error: unknown) {
       setError(errorMessage(error, "Something went wrong. Please try again."));
@@ -89,6 +83,7 @@ export default function CompleteProfileForm({ role = "Investor", category = "Coo
                 if (next.companyProfile) setDocumentError("");
               }}
               companyProfileError={documentError}
+              token={token ?? undefined}
             />
           ) : null}
         </div>

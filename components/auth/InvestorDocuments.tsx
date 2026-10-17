@@ -1,6 +1,7 @@
 "use client";
 
 import { DocumentUpload } from "@/components/ui/DocumentUpload";
+import { uploadFile } from "@/lib/api/auth";
 import type { ProfileDocuments } from "@/lib/inbox/types";
 
 /** The investor's company profile (required) and proof of funds (optional), on sign-up and on the profile page. */
@@ -8,11 +9,16 @@ export function InvestorDocuments({
   value,
   onChange,
   companyProfileError,
+  token,
 }: {
   value: ProfileDocuments;
   onChange: (documents: ProfileDocuments) => void;
   companyProfileError?: string;
+  /** Auth token — when provided files are uploaded immediately on selection. */
+  token?: string;
 }) {
+  const uploader = token ? (file: File) => uploadFile(file, token) : undefined;
+
   return (
     <>
       <div className="border-t border-line pt-5 sm:col-span-2">
@@ -27,6 +33,7 @@ export function InvestorDocuments({
         value={value.companyProfile}
         onChange={(doc) => onChange({ ...value, companyProfile: doc })}
         error={companyProfileError}
+        upload={uploader}
       />
       <DocumentUpload
         id="proofOfFunds"
@@ -34,6 +41,7 @@ export function InvestorDocuments({
         description="A bank statement or reference letter showing you can fund the projects you're after."
         value={value.proofOfFunds}
         onChange={(doc) => onChange({ ...value, proofOfFunds: doc })}
+        upload={uploader}
       />
     </>
   );

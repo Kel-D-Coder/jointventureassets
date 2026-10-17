@@ -6,8 +6,9 @@ import { ChooseYourPath } from "@/components/home/ChooseYourPath";
 import { ProcessSteps } from "@/components/home/ProcessSteps";
 import { WhyJva } from "@/components/home/WhyJva";
 import { CtaBand } from "@/components/home/CtaBand";
-import { getListings } from "@/lib/api/listings";
+import { getApprovedListings } from "@/lib/api/listings";
 import { formatNairaShort } from "@/lib/format";
+import type { Listing } from "@/types";
 
 export const metadata: Metadata = {
   title: "Joint Venture Assets | #1 Real Estate Joint Venture Platform in Nigeria",
@@ -59,7 +60,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const listings = await getListings();
+  const listings = await getApprovedListings().catch(() => [] as Listing[]);
   const stats = [
     { value: formatNairaShort(listings.reduce((sum, listing) => sum + listing.price, 0)), label: "in listed land & property" },
     { value: String(listings.filter((listing) => listing.dealType === "jv").length), label: "open JV opportunities" },

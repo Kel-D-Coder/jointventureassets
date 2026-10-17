@@ -49,7 +49,7 @@ export default function Dashboard() {
     }
 
     let cancelled = false
-    Promise.all([getUserStats(user.id), getMyRequests(token), getListings()])
+    Promise.all([getUserStats(user.id, token), getMyRequests(token), getListings()])
       .then(([userStats, myRequests, allListings]) => {
         if (cancelled) return
         setStats(userStats)
@@ -60,13 +60,15 @@ export default function Dashboard() {
       .finally(() => !cancelled && setIsLoading(false))
 
     // Listing submissions live in the shared demo inbox; a failure there shouldn't block the rest.
-    getMyAccount(user.id)
+    getMyAccount(user.id, token ?? undefined)
       .then((mine) => !cancelled && setAccount(mine))
       .catch(() => undefined)
 
-    getMySubmissions(user.email)
-      .then((mine) => !cancelled && setSubmissions(mine))
-      .catch(() => undefined)
+    if (token) {
+      getMySubmissions(token)
+        .then((mine) => !cancelled && setSubmissions(mine))
+        .catch(() => undefined)
+    }
 
     return () => {
       cancelled = true

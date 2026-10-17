@@ -26,13 +26,14 @@ const statusInfo: Record<AccountStatus, { label: string; note: string; className
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
+  const { user, isAuthenticated, token } = useAppSelector((state) => state.auth);
   const [account, setAccount] = useState<MemberAccount | null>(null);
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [profile, setProfile] = useState<Record<string, string>>({});
   const [documents, setDocuments] = useState<ProfileDocuments>({});
   const [loadError, setLoadError] = useState("");
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
@@ -41,7 +42,9 @@ export default function ProfilePage() {
       router.push("/login");
       return;
     }
-    getMyAccount(user.id)
+    setLoading(true);
+    setLoadError("");
+    getMyAccount(user.id, token ?? undefined)
       .then((loaded) => {
         setAccount(loaded);
         setFullName(loaded.fullName);
@@ -49,8 +52,9 @@ export default function ProfilePage() {
         setProfile(loaded.profile);
         setDocuments(loaded.documents ?? {});
       })
-      .catch((caught) => setLoadError(errorMessage(caught, "Couldn't load your profile.")));
-  }, [isAuthenticated, user, router]);
+      .catch((caught) => setLoadError(errorMessage(caught, "Couldn't load your profile.")))
+      .finally(() => setLoading(false));
+  }, [isAuthenticated, user, router, token]);
 
   const fields = useMemo(() => (account ? profileFieldsFor(account.role, account.category) : []), [account]);
 
@@ -67,7 +71,8 @@ export default function ProfilePage() {
     setSaving(true);
     setNotice(null);
     try {
-      const updated = await updateProfile(user.id, { fullName: fullName.trim(), phoneNumber, profile, ...(isInvestor ? { documents } : {}) });
+      await updateProfile(token ?? "", { phoneNumber, profile, ...(isInvestor ? { documents } : {}) });
+      const updated = await getMyAccount(user.id, token ?? undefined);
       setAccount(updated);
       setNotice({ tone: "success", text: "Profile saved. Our team sees your changes straight away." });
     } catch (caught) {
@@ -104,7 +109,12 @@ export default function ProfilePage() {
           </div>
         ) : null}
 
-        {!account && !loadError ? (
+        {loading ? (
+          <div className="mt-6 space-y-4" aria-busy="true">
+            <div className="h-12 animate-pulse rounded-2xl bg-white" />
+            <div className="h-96 animate-pulse rounded-3xl bg-white" />
+          </div>
+        ) : !account && !loadError ? (
           <div className="mt-6 h-96 animate-pulse rounded-3xl bg-white" aria-busy="true" />
         ) : account ? (
           <form onSubmit={save} className="mt-6 space-y-6">
@@ -127,7 +137,7 @@ export default function ProfilePage() {
               <h2 className="font-display text-2xl text-ink">{account.role} details</h2>
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
                 <ProfileFields fields={fields} values={profile} onChange={(name, value) => setProfile((current) => ({ ...current, [name]: value }))} />
-                {isInvestor ? <InvestorDocuments value={documents} onChange={setDocuments} /> : null}
+                {isInvestor ? <InvestorDocuments value={documents} onChange={setDocuments} token={token ?? undefined} /> : null}
               </div>
             </section>
 

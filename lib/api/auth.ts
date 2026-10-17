@@ -1,107 +1,118 @@
-import { DEMO_OTP } from "@/lib/data/demo";
-import { ApiError, issueToken, simulate, wait } from "@/lib/api/mock";
-import type { MemberAccount, MemberRole, ProfileDocuments } from "@/lib/inbox/types";
 import type { AuthUser } from "@/types";
+import type { ProfileDocuments } from "@/lib/inbox/types";
 
-/**
- * Accounts live in the demo inbox on this site's server (app/api/demo-auth and
- * app/api/demo-inbox), so the admin dashboard sees every sign-up and can
- * approve or suspend it. Request stats below still come from the in-browser mock.
- */
-
-interface AuthResponse {
+export interface AuthResponse {
   message: string;
   user: AuthUser;
   token: string;
 }
 
-async function call<T>(url: string, init?: RequestInit): Promise<T> {
-  await wait(250, 300);
-  const response = await fetch(url, { ...init, headers: { "Content-Type": "application/json" } }).catch(() => {
-    throw new ApiError("Couldn't reach the server. Check your connection and try again.");
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new ApiError((body as { message?: string }).message ?? "Something went wrong. Please try again.");
-  return body as T;
-}
-
-const auth = <T>(body: object) => call<T>("/api/demo-auth", { method: "POST", body: JSON.stringify(body) });
-
-function session(account: MemberAccount, message: string): AuthResponse {
-  const { id, fullName, email, role, category } = account;
-  return { message, user: { id, fullName, email, role, category }, token: issueToken(id, email) };
-}
-
-/** POST /auth/login */
-export async function login(email: string, password: string): Promise<AuthResponse> {
-  return session(await auth<MemberAccount>({ action: "login", email, password }), "Login successful");
-}
-
-/** Stands in for "Continue with Google" + the backend's googleEmail login. */
-export async function loginWithGoogle(): Promise<AuthResponse> {
-  return session(await auth<MemberAccount>({ action: "google" }), "Login successful");
-}
-
-/** POST /auth/register */
-export async function register(input: {
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  password: string;
-  role: string;
-  category: string;
-}): Promise<AuthResponse> {
-  return session(await auth<MemberAccount>({ action: "register", ...input }), "Registration successful");
-}
-
-/** GET /users/{id}: the member's full account, including their profile answers and documents. */
-export function getMyAccount(userId: string): Promise<MemberAccount> {
-  return call(`/api/demo-inbox/${encodeURIComponent(userId)}`);
-}
-
 export interface ProfileUpdate {
-  fullName?: string;
   phoneNumber?: string;
   profile?: Record<string, string>;
   documents?: ProfileDocuments;
 }
 
-/** PUT /users/profile/{id}: used by "Complete your profile" and the dashboard's profile page. */
-export function updateProfile(userId: string, changes: ProfileUpdate): Promise<MemberAccount> {
-  return call(`/api/demo-inbox/${encodeURIComponent(userId)}`, {
-    method: "PATCH",
-    body: JSON.stringify({ ...changes, profileCompleted: true }),
+const BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? "";
+
+async function call<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const response = await fetch(`${BASE}${path}`, {
+    ...init,
+    headers,
+    signal: AbortSignal.timeout(15000),
+  }).catch((err: unknown) => {
+    if (err instanceof DOMException && err.name === "TimeoutError") {
+      throw new Error("The server took too long to respond. Please try again.");
+    }
+    throw new Error("Couldn't reach the server. Check your connection and try again.");
   });
+
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error((body as { message?: string }).message ?? "Something went wrong. Please try again.");
+  return body as T;
 }
 
-/** POST /auth/password/otp */
-export async function sendResetCode(email: string): Promise<{ message: string }> {
-  await auth({ action: "account-exists", email });
-  return { message: `Code sent. In demo mode the code is always ${DEMO_OTP}.` };
+/** POST /auth/register */
+export function register(input: {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  confirmPassword: string;
+  role: string;
+  category: string;
+}): Promise<AuthResponse> {
+  return call("/auth/register", { method: "POST", body: JSON.stringify(input) });
 }
 
-/** POST /auth/password/otp/verify */
-export async function verifyResetCode(_email: string, otp: string): Promise<{ message: string }> {
-  await wait();
-  if (otp !== DEMO_OTP) throw new ApiError(`That code is wrong. In demo mode it is ${DEMO_OTP}.`);
-  return { message: "Code verified" };
+/** POST /auth/login */
+export function login(email: string, password: string): Promise<AuthResponse> {
+  return call("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
 }
 
-/** PUT /auth/password/reset */
+/** Google login — passes googleEmail to the backend */
+export function loginWithGoogle(googleEmail: string): Promise<AuthResponse> {
+  return call("/auth/login", { method: "POST", body: JSON.stringify({ googleEmail }) });
+}
+
+/** PATCH /user/complete-profile — requires auth token */
+export function updateProfile(token: string, changes: ProfileUpdate): Promise<{ status: boolean; message: string }> {
+  return call("/user/complete-profile", { method: "PATCH", body: JSON.stringify(changes) }, token);
+}
+
+/** POST /auth/forgot-password */
+export function sendResetCode(email: string): Promise<{ message: string }> {
+  return call("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+}
+
+/** POST /auth/resend-reset-otp — deletes the old OTP and issues a fresh one */
+export function resendResetCode(email: string): Promise<{ message: string }> {
+  return call("/auth/resend-reset-otp", { method: "POST", body: JSON.stringify({ email }) });
+}
+
+/** POST /auth/verify-reset-otp */
+export function verifyResetCode(email: string, otp: string): Promise<{ message: string }> {
+  return call("/auth/verify-reset-otp", { method: "POST", body: JSON.stringify({ email, otp }) });
+}
+
+/** POST /auth/reset-password */
 export function resetPassword(email: string, newPassword: string): Promise<{ message: string }> {
-  return auth({ action: "reset-password", email, password: newPassword });
+  return call("/auth/reset-password", { method: "POST", body: JSON.stringify({ email, newPassword }) });
 }
 
-/** GET /users/{id} stats: the numbers on the member dashboard. */
-export function getUserStats(userId: string): Promise<{ totalRequest: number; matched: number; availableMatches: number }> {
-  return simulate((db) => {
-    const mine = db.requests.filter((request) => request.userId === userId);
-    return {
-      totalRequest: mine.length,
-      matched: mine.filter((request) => request.status === "accepted").length,
-      availableMatches: db.requests.filter((request) => request.userId !== userId && request.status === "accepted").length,
-    };
+/** POST /upload — uploads a file to Supabase Storage, returns the public URL */
+export async function uploadFile(file: File, token: string): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+
+  const response = await fetch(`${BASE}/upload`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+    signal: AbortSignal.timeout(60000),
+  }).catch(() => {
+    throw new Error("Couldn't upload the file. Check your connection and try again.");
   });
+
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error((body as { message?: string }).message ?? "Upload failed.");
+  return (body as { url: string }).url;
 }
 
-export const ROLES: MemberRole[] = ["Landowner", "Investor", "Buyer"];
+/** GET /user/me — requires auth token stored in Redux */
+export function getMyAccount(_userId: string, token?: string): Promise<MemberAccount> {
+  return call("/user/me", undefined, token);
+}
+
+type MemberAccount = import("@/lib/inbox/types").MemberAccount;
+
+/** GET /requests/stats/my */
+export function getUserStats(_userId: string, token?: string | null): Promise<{ totalRequest: number; matched: number; availableMatches: number }> {
+  return call("/requests/stats/my", undefined, token ?? undefined);
+}
+
+export const ROLES = ["Landowner", "Investor", "Buyer"] as const;
+export type MemberRole = (typeof ROLES)[number];
