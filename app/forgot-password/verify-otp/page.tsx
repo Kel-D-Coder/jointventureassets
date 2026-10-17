@@ -1,200 +1,171 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion } from "framer-motion";
-import { FiArrowLeft } from "react-icons/fi";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import axios from "axios";
-import { Spinner } from "@/components/Spinner";
+import { FiArrowRight } from "react-icons/fi";
+import { resendResetCode, verifyResetCode } from "@/lib/api/auth";
+import { errorMessage } from "@/lib/api/mock";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { Alert, SubmitButton } from "@/components/ui/form";
 
-// Reuse the same animation variants from forgot-password page
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-} as const;
+const LENGTH = 6;
+const RESEND_COOLDOWN = 60;
 
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      type: "spring" as const,
-      stiffness: 100,
-      damping: 12,
-    },
-  },
-} as const;
-
-export default function VerifyOtp() {
+function VerifyOtpContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const email = searchParams.get('email') || '';
-  const [otp, setOtp] = useState(Array(6).fill(""));
+  const email = useSearchParams().get("email") || "";
+  const [otp, setOtp] = useState<string[]>(Array(LENGTH).fill(""));
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  // const [success, setSuccess] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const inputs = useRef<Array<HTMLInputElement | null>>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const handleOtpChange = (index: number, value: string) => {
-    if (value && !/^\d*$/.test(value)) return;
-    
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
-    // Auto-focus next input
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-${index + 1}`);
-      if (nextInput) nextInput.focus();
-    }
+  const startCooldown = () => {
+    setCooldown(RESEND_COOLDOWN);
+    timerRef.current = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const code = otp.join("");
+
+  const handleChange = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const next = [...otp];
+    next[index] = digit;
+    setOtp(next);
+    if (digit && index < LENGTH - 1) inputs.current[index + 1]?.focus();
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) inputs.current[index - 1]?.focus();
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData("text/plain").replace(/\D/g, "").slice(0, LENGTH);
+    if (!pasted) return;
     e.preventDefault();
-    const pasteData = e.clipboardData.getData('text/plain').trim();
-    if (/^\d{6}$/.test(pasteData)) {
-      const otpArray = pasteData.split('').slice(0, 6);
-      setOtp(otpArray);
-    }
+    setOtp(Array.from({ length: LENGTH }, (_, i) => pasted[i] ?? ""));
+    inputs.current[Math.min(pasted.length, LENGTH - 1)]?.focus();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const otpCode = otp.join('');
-    if (otpCode.length !== 6) {
-      setError("Please enter a valid 6-digit OTP");
+    if (code.length !== LENGTH) {
+      setError("Enter all 6 digits of the code.");
       return;
     }
-
     try {
       setLoading(true);
       setError(null);
-      
-      // Replace with your actual API endpoint
-      await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URL}/auth/password/otp/verify`, { 
-        email,
-        otp: otpCode 
-      });
-      
-      // If OTP is valid, redirect to reset password page
+      await verifyResetCode(email, code);
       router.push(`/reset-password?email=${encodeURIComponent(email)}`);
-      
-    } catch (error: unknown) {
-      console.error("Error verifying OTP:", error);
-      if (axios.isAxiosError(error)) {
-        console.log(error)
-        setError(error.response?.data?.message || "Invalid OTP. Please try again.");
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
-    } finally {
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Something went wrong. Please try again."));
       setLoading(false);
     }
   };
 
+  const resend = async () => {
+    try {
+      setResending(true);
+      setError(null);
+      setInfo(null);
+      const response = await resendResetCode(email);
+      setInfo(response.message);
+      setOtp(Array(LENGTH).fill(""));
+      inputs.current[0]?.focus();
+      startCooldown();
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Couldn't resend the code. Please try again."));
+    } finally {
+      setResending(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-      <motion.div
-        className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-yellow-500/20"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="p-8">
-          <div className="flex items-center mb-8">
+    <AuthShell
+      eyebrow="Reset password"
+      title="Enter your code"
+      intro={
+        <>
+          We sent a 6-digit code to <strong className="text-ink">{email || "your email"}</strong>.
+        </>
+      }
+      back={{ href: "/forgot-password", label: "Use a different email" }}
+      footer={
+        <>
+          Didn&apos;t get it?{" "}
+          {cooldown > 0 ? (
+            <span className="text-muted">Resend in {cooldown}s</span>
+          ) : (
             <button
-              onClick={() => router.back()}
-              className="p-2 rounded-full hover:bg-yellow-500/10 mr-4 transition-colors"
-              aria-label="Go back"
+              type="button"
+              onClick={resend}
+              disabled={resending || !email}
+              className="font-semibold text-gold-deep hover:underline disabled:opacity-50"
             >
-              <FiArrowLeft className="w-5 h-5 text-yellow-500" />
+              {resending ? "Sending…" : "Send a new code"}
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Verify OTP</h1>
-          </div>
-
-          <motion.p 
-            className="text-gray-600 mb-8"
-            variants={itemVariants}
-          >
-            We've sent a 6-digit verification code to {email || 'your email'}. Please enter it below.
-          </motion.p>
-
-          {error && (
-            <motion.div
-              className="mb-6 p-4 bg-red-900/10 text-red-500 border border-red-500/30 rounded-xl text-sm"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-            >
-              {error}
-            </motion.div>
           )}
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <fieldset>
+          <legend className="sr-only">6-digit code</legend>
+          <div className="flex justify-between gap-2 sm:gap-3">
+            {otp.map((digit, index) => (
+              <input
+                key={index}
+                ref={(element) => { inputs.current[index] = element; }}
+                type="text"
+                inputMode="numeric"
+                autoComplete={index === 0 ? "one-time-code" : "off"}
+                maxLength={1}
+                value={digit}
+                aria-label={`Digit ${index + 1}`}
+                onChange={(e) => handleChange(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                onPaste={handlePaste}
+                autoFocus={index === 0}
+                disabled={loading}
+                className="h-14 w-full rounded-xl border border-line bg-white text-center font-display text-2xl text-ink focus:border-gold focus:ring-2 focus:ring-gold/20 focus:outline-none sm:h-16"
+              />
+            ))}
+          </div>
+        </fieldset>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <motion.div 
-              className="flex justify-between space-x-4"
-              variants={itemVariants}
-            >
-              {[0, 1, 2, 3, 4, 5].map((index) => (
-                <input
-                  key={index}
-                  id={`otp-${index}`}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={otp[index]}
-                  onChange={(e) => handleOtpChange(index, e.target.value)}
-                  onPaste={handlePaste}
-                  className="w-full h-16 text-2xl text-center bg-gray-800 border border-gray-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                  autoFocus={index === 0}
-                  disabled={loading}
-                />
-              ))}
-            </motion.div>
+        {info ? <Alert tone="success">{info}</Alert> : null}
+        {error ? <Alert tone="error">{error}</Alert> : null}
 
-            <motion.div variants={itemVariants} className="pt-2">
-              <button
-                type="submit"
-                disabled={loading || otp.some(digit => !digit) || otp.join('').length !== 6}
-                className={`w-full flex justify-center py-3 px-4 border border-yellow-500/30 rounded-xl shadow-sm text-sm font-medium 
-                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 
-                transition-colors duration-200 disabled:opacity-70
-                ${loading 
-                  ? 'bg-gray-800 text-white cursor-wait' 
-                  : 'bg-yellow-500 text-gray-900 hover:bg-yellow-400 cursor-pointer'
-                }`}
-              >
-                {loading ? <Spinner /> : "Verify OTP"}
-              </button>
-            </motion.div>
-          </form>
+        <SubmitButton loading={loading} loadingText="Checking…" disabled={code.length !== LENGTH}>
+          Verify code <FiArrowRight aria-hidden="true" />
+        </SubmitButton>
+      </form>
+    </AuthShell>
+  );
+}
 
-          <motion.div 
-            className="mt-6 text-center text-sm"
-            variants={itemVariants}
-          >
-            <p className="text-gray-300">
-              Didn't receive a code?{' '}
-              <button 
-                onClick={() => {
-                  // TODO: Implement resend OTP logic
-                  alert('Resend OTP functionality would go here');
-                }}
-                className="font-medium text-yellow-500 hover:text-yellow-400 transition-colors"
-              >
-                Resend OTP
-              </button>
-            </p>
-          </motion.div>
-        </div>
-      </motion.div>
-    </div>
+export default function VerifyOtp() {
+  return (
+    <Suspense fallback={<div className="min-h-svh bg-ivory" />}>
+      <VerifyOtpContent />
+    </Suspense>
   );
 }

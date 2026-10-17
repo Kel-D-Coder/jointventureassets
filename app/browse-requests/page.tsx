@@ -1,246 +1,126 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  FiSearch,
-  FiFilter,
-  FiDollarSign,
-  FiMapPin,
-  FiClock,
-  FiUser,
-  FiCalendar,
-  FiCheckCircle,
-  FiXCircle,
-} from "react-icons/fi";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { FiSearch } from "react-icons/fi";
 import { useSearchRequests } from "@/hooks/useSearchRequests";
-import { Spinner } from "@/components/Spinner";
+import { useAppSelector } from "@/hooks/hooks";
+import { PageHero } from "@/components/ui/PageHero";
+import { Alert } from "@/components/ui/form";
+import { RequestCard } from "@/components/requests/RequestCard";
+import { requestTypeLabel } from "@/components/requests/StatusBadge";
+import { cx } from "@/lib/format";
+import type { RequestType } from "@/types";
+
+const tabs: Array<{ value: RequestType | undefined; label: string }> = [
+  { value: undefined, label: "All" },
+  ...(Object.keys(requestTypeLabel) as RequestType[]).map((value) => ({ value, label: requestTypeLabel[value] })),
+];
 
 export default function BrowseRequests() {
-  const [searchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const [type, setType] = useState<RequestType | undefined>();
+  const [query, setQuery] = useState("");
+  const { data: requests, loading, error, searchRequests } = useSearchRequests();
 
-  const {
-    data: requests,
-    loading,
-    error,
-    searchRequests,
-  } = useSearchRequests();
-
-  const getStatusBadgeClasses = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "accepted":
-        return "bg-green-100 text-green-800";
-      case "rejected":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "pending":
-        return <FiClock className="mr-1 text-yellow-500" />;
-      case "accepted":
-        return <FiCheckCircle className="mr-1 text-green-500" />;
-      case "rejected":
-        return <FiXCircle className="mr-1 text-red-500" />;
-      default:
-        return <FiClock className="mr-1 text-gray-400" />;
-    }
-  };
-
-  // Fetch all requests initially
+  // Refetch whenever the type filter changes.
   useEffect(() => {
-    searchRequests();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Refetch whenever filter changes
-  useEffect(() => {
-    if (selectedCategory === "All") {
-      searchRequests();
-    } else {
-      const mappedType =
-        selectedCategory === "Development"
-          ? "development"
-          : selectedCategory === "Partnership"
-          ? "partnership"
-          : selectedCategory === "Land"
-          ? "land"
-          : selectedCategory.toLowerCase();
-
-      searchRequests(mappedType);
-    }
+    if (isAuthenticated) void searchRequests(type);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory]);
+  }, [type, isAuthenticated]);
 
-  const categories = ["All", "Land", "Development", "Partnership"];
-
-  const filteredRequests =
-    requests?.filter((req) =>
-      req.description.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || [];
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Spinner />
-      </div>
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return (requests ?? []).filter(
+      (request) => !needle || [request.title, request.description, request.location].join(" ").toLowerCase().includes(needle),
     );
-  }
+  }, [requests, query]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Browse Requests
-          </h1>
-          <p className="text-gray-600">
-            Find business partners, investors, and opportunities
-          </p>
-        </div>
+    <main className="bg-white pb-24">
+      <PageHero
+        eyebrow="Requests"
+        title="What other members are looking for"
+        intro="When members can't find what they want in our listings, they post a request. Have what someone is looking for? Send an enquiry and we'll make the introduction."
+      />
 
-        {/* Search and Filter */}
-        <div className="mb-8">
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-5 w-5 text-red-400"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="mt-2 text-sm text-red-700 hover:text-red-600 font-medium"
-                  >
-                    Try again
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            {/* <div className="relative flex-1">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FiSearch className="text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search requests..."
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div> */}
-
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FiFilter className="text-gray-400" />
-              </div>
-              <select
-                className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {!isAuthenticated ? (
+          <div className="mt-12 rounded-2xl border border-line bg-ivory p-10 text-center">
+            <h2 className="font-display text-2xl text-ink">Log in to browse requests</h2>
+            <p className="mx-auto mt-2 max-w-md text-muted">Member requests are only visible to registered landowners, investors and buyers.</p>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link href="/login" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white hover:bg-ink/85">
+                Log in
+              </Link>
+              <Link href="/register" className="rounded-full border border-line bg-white px-6 py-3 text-sm font-bold text-ink hover:border-ink">
+                Create an account
+              </Link>
             </div>
           </div>
-        </div>
-
-        {/* Requests Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRequests.length > 0 ? (
-            filteredRequests.map((request, key) => (
-              <motion.div
-                key={key}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
-              >
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClasses(
-                        request.status
-                      )}`}
-                    >
-                      {getStatusIcon(request.status)}
-                      <span className="capitalize ml-1">{request.status}</span>
-                    </span>
-                  </div>
-
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">
-                    {request.title}
-                  </h3>
-
-                  <p className="text-gray-600 mb-4 line-clamp-3">
-                    {request.description}
-                  </p>
-
-                  <div className="space-y-3 mt-4">
-                    <div className="flex items-center text-sm text-gray-500">
-                      <FiDollarSign className="mr-2" />
-                      <span>Budget: {request.budget}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <FiMapPin className="mr-2" />
-                      <span>{request.location}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <FiClock className="mr-2" />
-                      <span>Duration: {request.timeline}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <FiUser className="mr-2" />
-                      <span>Posted by: {request.fullName}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <FiCalendar className="mr-2" />
-                      <span>
-                        {new Date(request.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-12">
-              <FiSearch className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900">
-                No requests found
-              </h3>
-              <p className="mt-1 text-gray-500">
-                Try adjusting your search or filter to find what you're looking
-                for.
-              </p>
+        ) : (
+          <>
+            <div className="sticky top-18 z-30 -mx-4 flex flex-col gap-3 border-b border-line bg-white/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:flex-row lg:items-center lg:px-8">
+              <div role="tablist" aria-label="Request type" className="flex shrink-0 gap-1 overflow-x-auto rounded-xl bg-ivory p-1">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.label}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab.value === type}
+                    onClick={() => setType(tab.value)}
+                    className={cx(
+                      "flex-1 rounded-lg px-4 py-2 text-sm font-semibold whitespace-nowrap transition-colors lg:flex-none",
+                      tab.value === type ? "bg-ink text-white" : "text-gray-600 hover:text-ink",
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              <label className="flex flex-1 items-center gap-2 rounded-xl border border-line px-3.5 focus-within:border-gold">
+                <FiSearch aria-hidden="true" className="shrink-0 text-muted" />
+                <span className="sr-only">Search requests</span>
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by title, description or location"
+                  className="w-full bg-transparent py-2.5 text-sm outline-none placeholder:text-gray-400"
+                />
+              </label>
             </div>
-          )}
-        </div>
+
+            {error ? <Alert tone="error" className="mt-6">{error}</Alert> : null}
+
+            <p className="mt-6 text-sm text-muted" aria-live="polite">
+              {loading ? "Loading requests…" : `${visible.length} ${visible.length === 1 ? "request" : "requests"}`}
+            </p>
+
+            {loading ? (
+              <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {[0, 1, 2].map((index) => <div key={index} className="h-72 animate-pulse rounded-2xl bg-ivory" />)}
+              </div>
+            ) : visible.length ? (
+              <ul className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {visible.map((request) => (
+                  <li key={request._id}>
+                    <RequestCard request={request} canEnquire={request.userId !== user?.id} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="mt-6 rounded-2xl border border-dashed border-line px-6 py-16 text-center">
+                <p className="font-display text-2xl text-ink">No requests found</p>
+                <p className="mx-auto mt-2 max-w-md text-sm text-muted">Try another type or search, or post your own request.</p>
+                <Link href="/submit-request" className="mt-6 inline-flex rounded-full bg-ink px-6 py-3 text-sm font-semibold text-white hover:bg-ink/85">
+                  Submit a request
+                </Link>
+              </div>
+            )}
+          </>
+        )}
       </div>
-    </div>
+    </main>
   );
 }
