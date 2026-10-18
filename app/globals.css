@@ -1,56 +1,65 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Joint Venture Assets — design tokens
+
+   Taken from the logo: gold on near-black. Pages sit on a warm ivory; ink is
+   used for dark bands (hero, footer, CTAs). Gold is a fill colour — it is too
+   light to carry text on ivory, so `gold-deep` is used wherever gold is read.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-ink: #0e1116;
+  --color-ink-soft: #1a1f27;
+  --color-gold: #c9a24a;
+  --color-gold-soft: #f3e7c6;
+  --color-gold-deep: #7a5c14;
+  --color-ivory: #f7f5f0;
+  --color-line: #e6e1d6;
+  --color-muted: #5b6270;
+
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, ui-serif, serif;
+}
+
 :root {
   --background: #ffffff;
-  --foreground: #171717;
-  
+  --foreground: #14171c;
 }
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-montserrat);
-}
-
-/* @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-} */
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-montserrat), sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
-.step-circle {
-  position: relative;
-  width: 3rem;
-  height: 3rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
+/* Tailwind v4 leaves buttons on the default arrow cursor. */
+button:not(:disabled),
+[role="button"],
+select {
+  cursor: pointer;
+}
+
+::selection {
+  background-color: var(--color-gold-soft);
+  color: var(--color-ink);
+}
+
+/* The small uppercase tag used for eyebrows above section headings. */
+@utility eyebrow {
+  font-size: 0.75rem;
   font-weight: 700;
-  font-size: 1.5rem;
-  color: #111827; /* text-gray-900 */
-  background-color: #facc15; /* bg-yellow-400 */
-  border: 4px solid #111827; /* border-gray-900 */
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.7);
-  animation: glow 2s ease-in-out infinite;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1.2;
 }
 
-@keyframes glow {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(250, 204, 21, 0.6),
-                0 0 20px rgba(250, 204, 21, 0.4);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(250, 204, 21, 1),
-                0 0 50px rgba(250, 204, 21, 0.8);
-    transform: scale(1.1);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

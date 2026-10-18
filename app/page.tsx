@@ -1,5 +1,14 @@
-import HomeClient from "@/components/HomeClient";
 import { Metadata } from "next";
+import { Hero } from "@/components/home/Hero";
+import { FeaturedListings } from "@/components/home/FeaturedListings";
+import { DealTypes } from "@/components/home/DealTypes";
+import { ChooseYourPath } from "@/components/home/ChooseYourPath";
+import { ProcessSteps } from "@/components/home/ProcessSteps";
+import { WhyJva } from "@/components/home/WhyJva";
+import { CtaBand } from "@/components/home/CtaBand";
+import { getApprovedListings } from "@/lib/api/listings";
+import { formatNairaShort } from "@/lib/format";
+import type { Listing } from "@/types";
 
 export const metadata: Metadata = {
   title: "Joint Venture Assets | #1 Real Estate Joint Venture Platform in Nigeria",
@@ -50,10 +59,23 @@ export const metadata: Metadata = {
 
 };
 
-export default function Home() {
+export default async function Home() {
+  const listings = await getApprovedListings().catch(() => [] as Listing[]);
+  const stats = [
+    { value: formatNairaShort(listings.reduce((sum, listing) => sum + listing.price, 0)), label: "in listed land & property" },
+    { value: String(listings.filter((listing) => listing.dealType === "jv").length), label: "open JV opportunities" },
+    { value: String(new Set(listings.map((listing) => listing.state)).size), label: "states covered" },
+  ];
+
   return (
-    <>
-      <HomeClient />
-    </>
+    <main>
+      <Hero stats={stats} />
+      <FeaturedListings />
+      <DealTypes />
+      <ChooseYourPath />
+      <ProcessSteps />
+      <WhyJva />
+      <CtaBand />
+    </main>
   );
 }

@@ -1,21 +1,29 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import Link from "next/link"
+import { useRef, useState, useEffect, type ChangeEvent, type DragEvent } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import axios from "axios"
 import { useSelector } from "react-redux"
+import { FiArrowLeft, FiFileText, FiUploadCloud, FiX } from "react-icons/fi"
 import { RootState } from "@/store/store"
-import { FiArrowLeft } from "react-icons/fi"
-import { Spinner } from "@/components/Spinner"
+import { getRequest, updateRequest } from "@/lib/api/requests"
+import { errorMessage } from "@/lib/api/errors"
+import { Alert, Field, SubmitButton, inputClass } from "@/components/ui/form"
+import { RequestBriefFields } from "@/components/requests/RequestBriefFields"
+import { briefFromRequest, briefPayload, briefProblem, requestSummary, requestTypeLabel, type Brief } from "@/lib/requests"
+import type { RequestType } from "@/types"
 
-interface Request {
-  _id: string
-  title: string
-  description: string
-  status: "pending" | "accepted" | "rejected"
-  createdAt: string
-  updatedAt?: string
+const MAX_FILE_MB = 10
+
+interface EditState {
+  brief: Brief
+  /** Everything in the description after the brief's own summary sentence. */
+  notes: string
+  fullName: string
+  email: string
+  phoneNumber: string
+  existingDocs: string[]
+  newFiles: File[]
 }
 
 export default function EditRequestPage() {
@@ -23,208 +31,214 @@ export default function EditRequestPage() {
   const router = useRouter()
   const { token } = useSelector((state: RootState) => state.auth)
 
-  const [request, setRequest] = useState<Request | null>(null)
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const [requestType, setRequestType] = useState<RequestType | "">("")
+  const [form, setForm] = useState<EditState | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const fetchRequestDetails = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_SERVER_URL}/request/user/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        )
-
-        const data: Request = response.data.data
-        setRequest(data)
-        setTitle(data.title)
-        setDescription(data.description)
-      } catch (err: unknown) {
-        setIsLoading(false)
-        setRequest(null)
-        if (axios.isAxiosError(err)) {
-          setError(
-            err.response?.data?.message ||
-              "Something went wrong while loading the request.",
-          )
-        } else {
-          setError("Something went wrong while loading the request.")
-        }
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    if (id && token) {
-      fetchRequestDetails()
-    }
+    if (!id || !token) { setIsLoading(false); return }
+    getRequest(token, String(id))
+      .then((data) => {
+        const summary = requestSummary(data)
+        const description = data.description ?? ""
+        setRequestType(data.requestType ?? "")
+        setForm({
+          brief: briefFromRequest(data),
+          notes: description.startsWith(summary) ? description.slice(summary.length).trim() : description,
+          fullName: data.fullName ?? "",
+          email: data.email ?? "",
+          phoneNumber: data.phoneNumber ?? "",
+          existingDocs: data.documents ?? [],
+          newFiles: [],
+        })
+      })
+      .catch((err) => setError(errorMessage(err, "Couldn't load the request.")))
+      .finally(() => setIsLoading(false))
   }, [id, token])
+
+  const set = <K extends keyof EditState>(key: K, value: EditState[K]) =>
+    setForm((prev) => prev ? { ...prev, [key]: value } : prev)
+
+  const onContact = (e: ChangeEvent<HTMLInputElement>) =>
+    set(e.target.name as "fullName" | "email" | "phoneNumber", e.target.value)
+
+  const addFiles = (list: FileList | null) => {
+    if (!list || !form) return
+    const incoming = Array.from(list)
+    const tooBig = incoming.filter((f) => f.size > MAX_FILE_MB * 1024 * 1024)
+    if (tooBig.length) setError(`${tooBig.map((f) => f.name).join(", ")} ${tooBig.length === 1 ? "is" : "are"} over ${MAX_FILE_MB} MB.`)
+    set("newFiles", [...form.newFiles, ...incoming.filter((f) => !tooBig.includes(f))])
+    if (fileInput.current) fileInput.current.value = ""
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!form || !requestType) return
     setError(null)
     setSuccess(null)
 
+    const problem = briefProblem(requestType, form.brief)
+    if (problem) {
+      setError(problem)
+      return
+    }
+    const fields = briefPayload(requestType, form.brief)
+
     try {
       setIsSubmitting(true)
-
-      // NOTE: Adjust this endpoint/method/body shape to match your backend API
-      await axios.put(
-        `${process.env.NEXT_PUBLIC_SERVER_URL}/request/update`,
-        {
-          title,
-          description,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      )
-
-      setSuccess("Request updated successfully.")
-
-      setTimeout(() => {
-        router.push(`/requests/${id}`)
-      }, 800)
+      await updateRequest(token, String(id), {
+        ...fields,
+        description: [requestSummary(fields), form.notes.trim()].filter(Boolean).join("\n\n"),
+        fullName: form.fullName,
+        email: form.email,
+        phoneNumber: form.phoneNumber,
+        documents: form.existingDocs,
+        newFiles: form.newFiles,
+      })
+      setSuccess("Request updated.")
+      setTimeout(() => router.push(`/requests/${id}`), 800)
     } catch (err: unknown) {
-      console.error("Error updating request:", err)
-      if (axios.isAxiosError(err)) {
-        setError(
-          err.response?.data?.message ||
-            "Something went wrong while updating the request.",
-        )
-      } else {
-        setError("Something went wrong while updating the request.")
-      }
+      setError(errorMessage(err, "Something went wrong while updating the request."))
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (isLoading || !request) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center text-gray-600">
-          <Spinner />
-          <p>Loading request details...</p>
+  return (
+    <main className="bg-ivory px-4 py-12 sm:px-6">
+      <div className="mx-auto max-w-2xl">
+        <Link href={`/requests/${id}`} className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
+          <FiArrowLeft aria-hidden="true" /> Back to request
+        </Link>
+
+        <div className="mt-6 rounded-3xl border border-line bg-white p-6 sm:p-10">
+          <p className="eyebrow text-gold-deep">Edit request</p>
+          <h1 className="mt-2 font-display text-3xl text-ink">Update your brief</h1>
+          <p className="mt-2 text-sm text-muted">Changes are visible to our team straight away.</p>
+
+          {isLoading ? (
+            <div className="mt-8 space-y-4" aria-busy="true">
+              {[1, 2, 3, 4].map((n) => <div key={n} className="h-12 animate-pulse rounded-xl bg-ivory" />)}
+            </div>
+          ) : !form || !requestType ? (
+            <Alert tone="error" className="mt-8">{error ?? "Request not found."}</Alert>
+          ) : (
+            <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-8">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted">Looking for:</span>
+                <span className="rounded-full bg-ivory px-3 py-1 text-sm font-semibold text-ink">
+                  {requestTypeLabel[requestType] ?? requestType}
+                </span>
+              </div>
+
+              <section className="rounded-2xl border border-line p-6">
+                <h2 className="font-display text-xl text-ink">Your brief</h2>
+                <div className="mt-5">
+                  <RequestBriefFields type={requestType} value={form.brief} onChange={(brief) => set("brief", brief)} />
+                </div>
+                <Field label="Anything else we should know?" htmlFor="notes" hint="Optional." className="mt-5">
+                  <textarea id="notes" rows={4} value={form.notes} onChange={(e) => set("notes", e.target.value)} className={inputClass} />
+                </Field>
+              </section>
+
+              <section className="rounded-2xl border border-line p-6">
+                <h2 className="font-display text-xl text-ink">Contact details</h2>
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <Field label="Full name" htmlFor="fullName">
+                    <input id="fullName" name="fullName" value={form.fullName} onChange={onContact} className={inputClass} />
+                  </Field>
+                  <Field label="Email" htmlFor="email">
+                    <input id="email" name="email" type="email" value={form.email} onChange={onContact} className={inputClass} />
+                  </Field>
+                  <Field label="Phone number" htmlFor="phoneNumber">
+                    <input id="phoneNumber" name="phoneNumber" type="tel" value={form.phoneNumber} onChange={onContact} className={inputClass} placeholder="+234" />
+                  </Field>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-line p-6">
+                <h2 className="font-display text-xl text-ink">Attachments</h2>
+
+                {form.existingDocs.length > 0 ? (
+                  <ul className="mt-4 space-y-2">
+                    {form.existingDocs.map((url) => {
+                      const name = url.split("/").pop() ?? url
+                      return (
+                        <li key={url} className="flex items-center gap-3 rounded-xl border border-line px-4 py-3 text-sm">
+                          <FiFileText aria-hidden="true" className="shrink-0 text-gold-deep" />
+                          <span className="min-w-0 flex-1 truncate text-ink">{name}</span>
+                          <button
+                            type="button"
+                            onClick={() => set("existingDocs", form.existingDocs.filter((d) => d !== url))}
+                            aria-label={`Remove ${name}`}
+                            className="grid h-7 w-7 place-items-center rounded-full text-muted hover:bg-red-50 hover:text-red-700"
+                          >
+                            <FiX aria-hidden="true" />
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : null}
+
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={(e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files) }}
+                  className={`mt-4 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors ${dragging ? "border-gold bg-gold-soft/40" : "border-line"}`}
+                >
+                  <FiUploadCloud aria-hidden="true" className="mx-auto h-7 w-7 text-gold-deep" />
+                  <p className="mt-2 text-sm font-semibold text-ink">Add more files</p>
+                  <p className="mt-1 text-xs text-muted">PDF, DOC, JPG or PNG, up to {MAX_FILE_MB} MB each</p>
+                  <button type="button" onClick={() => fileInput.current?.click()} className="mt-3 rounded-full border border-line bg-white px-5 py-2 text-sm font-semibold text-ink hover:border-ink">
+                    Choose files
+                  </button>
+                  <input ref={fileInput} type="file" multiple hidden accept=".pdf,.doc,.docx,image/*" onChange={(e) => addFiles(e.target.files)} />
+                </div>
+
+                {form.newFiles.length > 0 ? (
+                  <ul className="mt-3 space-y-2">
+                    {form.newFiles.map((file, index) => (
+                      <li key={file.name + index} className="flex items-center gap-3 rounded-xl border border-line px-4 py-3 text-sm">
+                        <FiFileText aria-hidden="true" className="shrink-0 text-gold-deep" />
+                        <span className="min-w-0 flex-1 truncate text-ink">{file.name}</span>
+                        <span className="shrink-0 text-xs text-muted">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
+                        <button
+                          type="button"
+                          onClick={() => set("newFiles", form.newFiles.filter((_, i) => i !== index))}
+                          aria-label={`Remove ${file.name}`}
+                          className="grid h-7 w-7 place-items-center rounded-full text-muted hover:bg-red-50 hover:text-red-700"
+                        >
+                          <FiX aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </section>
+
+              {error ? <Alert tone="error">{error}</Alert> : null}
+              {success ? <Alert tone="success">{success}</Alert> : null}
+
+              <div className="flex flex-col-reverse gap-3 border-t border-line pt-6 sm:flex-row sm:justify-end">
+                <Link href={`/requests/${id}`} className="rounded-xl border border-line px-6 py-3.5 text-center text-sm font-semibold text-ink hover:border-ink">
+                  Cancel
+                </Link>
+                <div className="sm:w-48">
+                  <SubmitButton loading={isSubmitting} loadingText="Saving…">
+                    Save changes
+                  </SubmitButton>
+                </div>
+              </div>
+            </form>
+          )}
         </div>
       </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center text-yellow-600 hover:text-yellow-700 transition-colors mb-6"
-        >
-          <FiArrowLeft className="mr-2" /> Back
-        </button>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="bg-white shadow sm:rounded-lg p-6 sm:p-8"
-        >
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-            Edit Request
-          </h1>
-          <p className="text-sm text-gray-500 mb-6">
-            Update the details of your request below.
-          </p>
-
-          {error && (
-            <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">
-              {success}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label
-                htmlFor="title"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Title
-              </label>
-              <input
-                id="title"
-                name="title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm"
-                required
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="description"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Description
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                rows={6}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm"
-                required
-              />
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => router.push(`/requests/${id}`)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={`
-                    inline-flex items-center px-4 py-2 border border-transparent text-sm
-                    font-medium rounded-md shadow-sm text-white
-                    bg-yellow-500 hover:bg-yellow-700
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500
-                    disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-800
-                    ${isSubmitting ? "bg-gray-800 opacity-70 cursor-not-allowed" : ""}
-                `}
-              >
-                {isSubmitting ? (
-                  <Spinner />
-                ) : (
-                  "Save Changes"
-                )}
-              </button>
-            </div>
-          </form>
-        </motion.div>
-      </div>
-    </div>
+    </main>
   )
 }

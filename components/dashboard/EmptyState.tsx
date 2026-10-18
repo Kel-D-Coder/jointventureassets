@@ -1,52 +1,24 @@
-"use client"
-
-import { motion } from "framer-motion"
-import { ReactNode } from "react"
+import Link from "next/link";
+import type { ReactNode } from "react";
 
 interface EmptyStateProps {
-  icon: ReactNode
-  title: string
-  description: string
-  action?: {
-    label: string
-    onClick: () => void
-  }
+  icon: ReactNode;
+  title: string;
+  description: string;
+  action?: { label: string; href: string };
 }
 
 export default function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5 }}
-      className="flex flex-col items-center justify-center py-12 px-6 text-center"
-    >
-      <motion.div
-        className="text-gray-300 mb-4"
-        animate={{
-          y: [0, -10, 0],
-        }}
-        transition={{
-          repeat: Infinity,
-          duration: 2,
-          ease: "easeInOut",
-        }}
-      >
-        {icon}
-      </motion.div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600 text-sm mb-6 max-w-md">{description}</p>
-      {action && (
-        <motion.button
-          onClick={action.onClick}
-          className="bg-gray-900 hover:bg-yellow-500 text-white hover:text-gray-900 font-semibold px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <span className="text-xl">+</span>
+    <div className="flex flex-col items-center rounded-xl border border-dashed border-line px-6 py-12 text-center">
+      <span className="grid h-12 w-12 place-items-center rounded-full bg-ivory text-gold-deep">{icon}</span>
+      <h3 className="mt-4 font-semibold text-ink">{title}</h3>
+      <p className="mt-1 max-w-sm text-sm text-muted">{description}</p>
+      {action ? (
+        <Link href={action.href} className="mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-ink/85">
           {action.label}
-        </motion.button>
-      )}
-    </motion.div>
-  )
+        </Link>
+      ) : null}
+    </div>
+  );
 }

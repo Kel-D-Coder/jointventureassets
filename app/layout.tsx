@@ -1,18 +1,23 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Fraunces, Manrope } from "next/font/google";
 import "./globals.css";
-import NavbarWrapper from "@/components/NavbarWrapper";
-import FooterWrapper from "@/components/FooterWrapper";
+import NavbarWrapper from "@/components/layout/NavbarWrapper";
+import FooterWrapper from "@/components/layout/FooterWrapper";
 import StoreProvider from "@/store/StoreProvider";
-import WhatsAppButton from "@/components/WhatsAppButton";
-import AuthSync from "@/components/AuthSync";
-import CookieConsentBanner from "@/components/CookieConsentBanner";
-import AuthProvider from "@/components/AuthProvider";
+import WhatsAppButton from "@/components/layout/WhatsAppButton";
+import CookieConsentBanner from "@/components/layout/CookieConsentBanner";
 
-const inter = Inter({
+const manrope = Manrope({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
-  variable: '--font-inter',
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-manrope',
+  display: 'swap'
+});
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['500', '600'],
+  variable: '--font-fraunces',
   display: 'swap'
 });
 
@@ -28,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script 
+        <script
           type="application/ld+json"
            dangerouslySetInnerHTML={{
             __html: JSON.stringify({
@@ -46,17 +51,14 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} antialiased`}
+        className={`${manrope.variable} ${fraunces.variable} antialiased`}
       >
         <StoreProvider>
-          <AuthProvider>
-            <AuthSync />
-              <NavbarWrapper />
-              {children}
-              <CookieConsentBanner />
-              <FooterWrapper />
-              <WhatsAppButton />
-          </AuthProvider>
+          <NavbarWrapper />
+          {children}
+          <CookieConsentBanner />
+          <FooterWrapper />
+          <WhatsAppButton />
         </StoreProvider>
       </body>
     </html>
