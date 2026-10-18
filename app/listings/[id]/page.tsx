@@ -1,16 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { FiArrowLeft, FiCheck, FiCheckCircle, FiMapPin } from "react-icons/fi";
-import { getApprovedListings, getListing } from "@/lib/api/listings";
-import { DealBadge } from "@/components/listings/DealBadge";
+import { getApprovedListings } from "@/lib/api/listings";
+import { FiArrowLeft, FiCheck, FiCheckCircle, FiMapPin, FiStar } from "react-icons/fi";
+import { getListing, similarListings } from "@/lib/api/listings";
 import { EnquiryForm } from "@/components/enquiries/EnquiryForm";
 import { ListingGallery } from "@/components/listings/ListingGallery";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { propertyTypeLabel } from "@/components/listings/labels";
 import { formatNaira, formatSize, premiumText } from "@/lib/format";
+import type { Listing } from "@/types";
 
 type Props = { params: Promise<{ id: string }> };
+
+/** "Land for joint venture", "Residential property for sale"… */
+function kindLine(listing: Listing): string {
+  const kind = listing.propertyType === "land" ? "Land" : `${propertyTypeLabel[listing.propertyType]} property`;
+  return listing.dealType === "jv" ? `${kind} for joint venture` : `${kind} for sale`;
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const listing = await getListing((await params).id);
@@ -45,29 +52,46 @@ export default async function ListingDetailPage({ params }: Props) {
           <FiArrowLeft aria-hidden="true" /> All listings
         </Link>
 
-        <div className="mt-6 flex flex-wrap items-start justify-between gap-6">
-          <div className="max-w-3xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <DealBadge dealType={listing.dealType} />
-              {listing.status === "under_offer" ? (
-                <span className="rounded-full bg-ivory px-2.5 py-1 text-xs font-bold text-ink">Under offer</span>
-              ) : null}
-              {listing.verified ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-800">
-                  <FiCheckCircle aria-hidden="true" /> Title verified
-                </span>
+        <section className="mt-6 rounded-2xl border border-line bg-white p-5 shadow-[0_10px_30px_-24px_rgb(14_17_22/0.35)] sm:p-7">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 max-w-3xl">
+              <div className="flex flex-wrap items-center gap-2">
+                {listing.featured ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-3 py-1 text-xs font-bold text-gold-deep">
+                    <FiStar aria-hidden="true" /> Featured
+                  </span>
+                ) : null}
+                {listing.verified ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-800">
+                    <FiCheckCircle aria-hidden="true" /> Title verified
+                  </span>
+                ) : null}
+                {listing.status === "under_offer" ? (
+                  <span className="rounded-full bg-ivory px-3 py-1 text-xs font-bold text-ink">Under offer</span>
+                ) : null}
+              </div>
+
+              <p className="mt-4 text-sm font-semibold text-gold-deep">{kindLine(listing)}</p>
+              <h1 className="mt-1.5 text-3xl leading-tight font-bold tracking-tight text-ink sm:text-4xl">{listing.title}</h1>
+              <p className="mt-3 flex items-center gap-2 text-muted">
+                <FiMapPin aria-hidden="true" className="shrink-0" /> {listing.area}, {listing.city}, {listing.state}
+              </p>
+            </div>
+
+            <div className="shrink-0 lg:text-right">
+              <p className="text-3xl font-bold tracking-tight text-ink tabular-nums sm:text-4xl">{formatNaira(listing.price)}</p>
+              <p className="mt-1 text-sm text-muted">{listing.dealType === "jv" ? "Land value" : "Asking price"}</p>
+              {listing.jv ? (
+                <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-ivory px-3 py-1.5 text-sm font-semibold text-ink">
+                  {listing.jv.sharingFormula} sharing
+                  {listing.jv.sharingNegotiable !== undefined ? (
+                    <span className="font-medium text-muted">· {listing.jv.sharingNegotiable ? "Negotiable" : "Fixed"}</span>
+                  ) : null}
+                </p>
               ) : null}
             </div>
-            <h1 className="mt-4 font-display text-3xl leading-tight text-ink sm:text-4xl lg:text-5xl">{listing.title}</h1>
-            <p className="mt-3 flex items-center gap-2 text-muted">
-              <FiMapPin aria-hidden="true" /> {listing.area}, {listing.city}, {listing.state}
-            </p>
           </div>
-          <div className="text-left sm:text-right">
-            <p className="eyebrow text-muted">{listing.dealType === "jv" ? "Land value" : "Asking price"}</p>
-            <p className="mt-1 font-display text-3xl text-ink sm:text-4xl">{formatNaira(listing.price)}</p>
-          </div>
-        </div>
+        </section>
 
         <div className="mt-8">
           <ListingGallery images={listing.images} title={listing.title} />
