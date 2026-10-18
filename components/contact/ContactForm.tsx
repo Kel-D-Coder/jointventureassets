@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FiArrowRight } from "react-icons/fi";
 import { useAppSelector } from "@/hooks/hooks";
 import { sendContactMessage } from "@/lib/api/contact";
-import { errorMessage } from "@/lib/api/mock";
+import { errorMessage } from "@/lib/api/errors";
 import { Alert, Field, Select, SubmitButton, inputClass } from "@/components/ui/form";
 
 const emptyForm = {

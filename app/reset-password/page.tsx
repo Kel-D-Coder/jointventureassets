@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FiArrowRight, FiCheckCircle } from "react-icons/fi";
 import { resetPassword } from "@/lib/api/auth";
-import { errorMessage } from "@/lib/api/mock";
+import { errorMessage } from "@/lib/api/errors";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Alert, Field, PasswordInput, SubmitButton } from "@/components/ui/form";
 

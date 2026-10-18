@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FiArrowRight, FiMail } from "react-icons/fi";
 import { sendResetCode } from "@/lib/api/auth";
-import { errorMessage } from "@/lib/api/mock";
+import { errorMessage } from "@/lib/api/errors";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Alert, Field, SubmitButton, inputClass } from "@/components/ui/form";
 

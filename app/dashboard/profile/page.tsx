@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { FiArrowLeft, FiCheckCircle, FiClock, FiSlash } from "react-icons/fi";
 import { useAppSelector } from "@/hooks/hooks";
 import { getMyAccount, updateProfile } from "@/lib/api/auth";
-import { errorMessage } from "@/lib/api/mock";
+import { errorMessage } from "@/lib/api/errors";
 import { ProfileFields, profileFieldsFor } from "@/components/auth/ProfileFields";
 import { InvestorDocuments } from "@/components/auth/InvestorDocuments";
 import { Alert, Field, SubmitButton, inputClass } from "@/components/ui/form";

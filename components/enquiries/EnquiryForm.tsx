@@ -4,8 +4,9 @@ import { useState, type FormEvent } from "react";
 import { FiCheckCircle } from "react-icons/fi";
 import { useAppSelector } from "@/hooks/hooks";
 import { sendEnquiry } from "@/lib/api/inbox";
-import { errorMessage } from "@/lib/api/mock";
-import { cx } from "@/lib/format";
+import { errorMessage } from "@/lib/api/errors";
+import { cx, formatNaira } from "@/lib/format";
+import { SALE_FEE_RATE, saleFee } from "@/lib/fees";
 import { Alert, SubmitButton, inputClass } from "@/components/ui/form";
 import { DocumentUpload } from "@/components/ui/DocumentUpload";
 import type { InboxEnquiry, SubmittedDocument } from "@/lib/inbox/types";
@@ -21,14 +22,20 @@ export function EnquiryForm({
   defaultMessage,
   submitLabel,
   jointVenture = false,
+  salePrice,
+  sample = false,
 }: {
   target: InboxEnquiry["target"];
   eyebrow: string;
   defaultMessage: string;
   submitLabel: string;
   jointVenture?: boolean;
+  /** Sale listings: the asking price, for the 5% facilitation fee terms. */
+  salePrice?: number;
+  /** A sample listing: shows the whole flow but sends nothing. */
+  sample?: boolean;
 }) {
-  const user = useAppSelector((state) => state.auth.user);
+  const { user, token } = useAppSelector((state) => state.auth);
   const [form, setForm] = useState({
     fullName: user?.fullName ?? "",
     email: user?.email ?? "",
@@ -38,6 +45,7 @@ export function EnquiryForm({
   const [generateLoi, setGenerateLoi] = useState<"" | "yes" | "no">("");
   const [letterhead, setLetterhead] = useState<SubmittedDocument>();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const isSale = !jointVenture && salePrice !== undefined && salePrice > 0;
   const [jvErrors, setJvErrors] = useState<{ generateLoi?: string; letterhead?: string }>({});
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -57,15 +65,27 @@ export function EnquiryForm({
       setJvErrors(problems);
       if (problems.generateLoi || problems.letterhead || !acceptedTerms) return;
     }
+    if (isSale && !acceptedTerms) {
+      setError("Please agree to the facilitation fee terms to send your enquiry.");
+      return;
+    }
+    if (sample) {
+      setSent(true);
+      return;
+    }
     setSending(true);
     try {
-      await sendEnquiry({
-        ...form,
-        target,
-        jv: jointVenture
-          ? { generateLoi: generateLoi === "yes", letterhead: generateLoi === "yes" ? letterhead : undefined, acceptedFeeTerms: true }
-          : undefined,
-      });
+      await sendEnquiry(
+        {
+          ...form,
+          target,
+          jv: jointVenture
+            ? { generateLoi: generateLoi === "yes", letterhead: generateLoi === "yes" ? letterhead : undefined, acceptedFeeTerms: true }
+            : undefined,
+          sale: isSale ? { acceptedFeeTerms: true, feeRate: SALE_FEE_RATE, askingPrice: salePrice } : undefined,
+        },
+        token,
+      );
       setSent(true);
     } catch (caught) {
       setError(errorMessage(caught, "Couldn't send your enquiry. Please try again."));
@@ -79,7 +99,9 @@ export function EnquiryForm({
       <div className="rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
         <FiCheckCircle aria-hidden="true" className="mx-auto h-8 w-8 text-green-700" />
         <p className="mt-3 font-semibold text-ink">Enquiry sent</p>
-        <p className="mt-1 text-sm text-muted">Thanks. The JVA team will contact you within one working day.</p>
+        <p className="mt-1 text-sm text-muted">
+          {sample ? "This is a sample listing, so nothing was sent. On a real listing the JVA team would contact you within one working day." : "Thanks. The JVA team will contact you within one working day."}
+        </p>
       </div>
     );
   }
@@ -176,7 +198,42 @@ export function EnquiryForm({
         </>
       ) : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
-      <SubmitButton loading={sending} loadingText="Sending…" disabled={jointVenture && !acceptedTerms}>
+      {isSale ? (
+        <div className="rounded-xl border border-line p-4">
+          <p className="text-sm font-semibold text-ink">Facilitation fee</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted">
+            When you buy through Joint Venture Assets, a facilitation fee of <strong className="text-ink">{SALE_FEE_RATE * 100}% of the agreed price</strong> is paid{" "}
+            <strong className="text-ink">on top of</strong> the price.
+          </p>
+          <dl className="mt-3 space-y-1.5 rounded-lg bg-ivory p-3 text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">Asking price</dt>
+              <dd className="font-semibold text-ink tabular-nums">{formatNaira(salePrice)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">Facilitation fee ({SALE_FEE_RATE * 100}%)</dt>
+              <dd className="font-semibold text-ink tabular-nums">+ {formatNaira(saleFee(salePrice))}</dd>
+            </div>
+            <div className="flex justify-between gap-3 border-t border-line pt-1.5">
+              <dt className="font-semibold text-ink">Total you&apos;d pay</dt>
+              <dd className="font-bold text-ink tabular-nums">{formatNaira(salePrice + saleFee(salePrice))}</dd>
+            </div>
+          </dl>
+          <p className="mt-2 text-[0.6875rem] text-muted">Worked out on the asking price. The fee is {SALE_FEE_RATE * 100}% of the final agreed price.</p>
+          <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-ink">
+            <input
+              type="checkbox"
+              required
+              checked={acceptedTerms}
+              onChange={(event) => setAcceptedTerms(event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#c9a24a]"
+            />
+            I agree to pay the {SALE_FEE_RATE * 100}% facilitation fee on top of the agreed price.
+          </label>
+        </div>
+      ) : null}
+      {sample ? <p className="rounded-lg bg-ivory px-3 py-2 text-xs text-muted">Sample listing: this form works, but nothing is sent.</p> : null}
+      <SubmitButton loading={sending} loadingText="Sending…" disabled={(jointVenture || isSale) && !acceptedTerms}>
         {submitLabel}
       </SubmitButton>
       <p className="text-center text-xs text-muted">The JVA team replies within one working day.</p>

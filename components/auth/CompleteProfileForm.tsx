@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiArrowRight } from "react-icons/fi";
 import { updateProfile } from "@/lib/api/auth";
-import { errorMessage } from "@/lib/api/mock";
+import { errorMessage } from "@/lib/api/errors";
 import { useAppSelector } from "@/hooks/hooks";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { SignupSteps } from "@/components/auth/SignupSteps";

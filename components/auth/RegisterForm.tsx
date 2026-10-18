@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { FiArrowRight } from "react-icons/fi";
 import { register } from "@/lib/api/auth";
-import { errorMessage } from "@/lib/api/mock";
+import { errorMessage } from "@/lib/api/errors";
 import { AppDispatch } from "@/store/store";
 import { setCredentials } from "@/store/authSlice";
 import { AuthShell } from "@/components/auth/AuthShell";

@@ -1,32 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useDispatch } from "react-redux";
 import toast from "react-hot-toast";
 import googleLogo from "@/assets/google.svg";
-import { AppDispatch } from "@/store/store";
-import { setCredentials } from "@/store/authSlice";
-import { loginWithGoogle } from "@/lib/api/auth";
-import { errorMessage } from "@/lib/api/mock";
 
-/** Demo mode: signs in as a sample Google account instead of opening Google. */
+/**
+ * The server signs people in with their Google email (POST /auth/login with googleEmail),
+ * but the Google sign-in pop-up that provides that email isn't set up yet.
+ * TODO: add Google OAuth, then call loginWithGoogle(email) from @/lib/api/auth.
+ */
 export function GoogleButton() {
-  const [loading, setLoading] = useState(false);
-  const dispatch = useDispatch<AppDispatch>();
-  const router = useRouter();
-
-  const handleClick = async () => {
-    try {
-      setLoading(true);
-      const response = await loginWithGoogle();
-      dispatch(setCredentials({ user: response.user, token: response.token }));
-      router.push("/dashboard");
-    } catch (error) {
-      toast.error(errorMessage(error, "Google sign-in failed. Please try again."));
-      setLoading(false);
-    }
+  const loading = false;
+  const handleClick = () => {
+    toast("Google sign-in is coming soon. Please use your email and password for now.");
   };
 
   return (

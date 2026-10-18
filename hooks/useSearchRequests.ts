@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAppSelector } from "@/hooks/hooks";
 import { getAcceptedRequests } from "@/lib/api/requests";
-import { errorMessage } from "@/lib/api/mock";
+import { errorMessage } from "@/lib/api/errors";
 import type { PartnerRequest, RequestType } from "@/types";
 
 interface UseSearchRequestsResult {

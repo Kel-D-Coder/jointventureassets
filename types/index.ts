@@ -40,8 +40,12 @@ export interface Listing {
 }
 
 export type RequestStatus = "pending" | "accepted" | "rejected";
-/** "land": offering land or property. "purchase": wanting to buy it. */
-export type RequestType = "land" | "purchase" | "development" | "partnership";
+/**
+ * What a member wants JVA to find: a joint venture, land to buy, a property to
+ * buy, a development project, or a professional partner. (Older "land" requests
+ * from before 2026-10-18 were offers of land.)
+ */
+export type RequestType = "jv" | "land" | "purchase" | "development" | "partnership";
 
 /** A member's request, shaped like the backend's Mongo document (hence `_id`). */
 export interface PartnerRequest {

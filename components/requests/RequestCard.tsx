@@ -1,6 +1,7 @@
 import { FiCalendar, FiClock, FiMapPin, FiUser } from "react-icons/fi";
 import { formatBudget, humanise, requestTypeLabel } from "@/components/requests/StatusBadge";
 import { RequestEnquiryButton } from "@/components/requests/RequestEnquiryButton";
+import { requestSummary } from "@/lib/requests";
 import type { PartnerRequest } from "@/types";
 
 const dateFormat = new Intl.DateTimeFormat("en-NG", { day: "numeric", month: "short", year: "numeric" });
@@ -11,7 +12,7 @@ export function RequestCard({ request, canEnquire = true }: { request: PartnerRe
   return (
     <article className="flex h-full flex-col rounded-2xl border border-line bg-white p-6 transition hover:shadow-[0_18px_40px_-24px_rgb(14_17_22/0.35)]">
       <div className="flex flex-wrap items-center gap-2">
-        <span className={request.requestType === "land" || request.requestType === "purchase" ? "rounded-full bg-gold px-2.5 py-1 text-xs font-bold text-ink" : "rounded-full bg-ink px-2.5 py-1 text-xs font-bold text-white"}>
+        <span className={request.requestType === "jv" || request.requestType === "land" || request.requestType === "purchase" ? "rounded-full bg-gold px-2.5 py-1 text-xs font-bold text-ink" : "rounded-full bg-ink px-2.5 py-1 text-xs font-bold text-white"}>
           {requestTypeLabel[request.requestType]}
         </span>
         {subtype ? <span className="rounded-full bg-ivory px-2.5 py-1 text-xs font-semibold text-muted">{subtype}</span> : null}
@@ -25,7 +26,8 @@ export function RequestCard({ request, canEnquire = true }: { request: PartnerRe
       </div>
 
       <h3 className="mt-4 font-display text-xl leading-snug text-ink">{request.title || "Untitled request"}</h3>
-      <p className="mt-2 line-clamp-3 flex-1 text-sm leading-relaxed text-muted">{request.description}</p>
+      <p className="mt-2 text-sm font-medium text-ink">{requestSummary(request)}</p>
+      <p className="mt-2 line-clamp-2 flex-1 text-sm leading-relaxed text-muted">{otherNotes(request)}</p>
 
       <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-line pt-4 text-xs text-muted">
         <div className="col-span-2 flex items-center gap-1.5">
@@ -52,11 +54,18 @@ export function RequestCard({ request, canEnquire = true }: { request: PartnerRe
 
       <div className="mt-4 flex items-end justify-between">
         <div>
-          <p className="text-[0.6875rem] font-bold tracking-wider text-muted uppercase">{request.requestType === "land" ? "Value" : "Budget"}</p>
+          <p className="text-[0.6875rem] font-bold tracking-wider text-muted uppercase">"Budget"</p>
           <p className="text-lg font-extrabold text-ink">{formatBudget(request.budget)}</p>
         </div>
         {canEnquire ? <RequestEnquiryButton request={request} /> : <span className="text-xs font-semibold text-muted">Your request</span>}
       </div>
     </article>
   );
+}
+
+/** The description without the summary sentence it starts with, which the card already shows. */
+function otherNotes(request: PartnerRequest): string {
+  const summary = requestSummary(request);
+  const description = request.description ?? "";
+  return description.startsWith(summary) ? description.slice(summary.length).trim() : description;
 }

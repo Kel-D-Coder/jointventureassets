@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAppSelector } from "@/store/hooks";
+import { useAppSelector } from "@/hooks/hooks";
 import { getAdminSubmissions, updateSubmissionStatus } from "@/lib/api/admin";
 import type { ListingSubmission, SubmissionStatus } from "@/lib/inbox/types";
 import { formatNaira } from "@/lib/format";
@@ -33,7 +33,7 @@ export default function AdminListings() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) { router.replace("/auth/login"); return; }
+    if (!token) { router.replace("/login"); return; }
     setLoading(true);
     setError(null);
     getAdminSubmissions(token, tab)

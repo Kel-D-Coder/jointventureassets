@@ -6,10 +6,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FiArrowRight, FiCheckCircle, FiFileText, FiSave, FiStar, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
 import { useAppSelector } from "@/hooks/hooks";
 import { deleteSubmission, getSubmission, saveSubmission, type SubmissionInput } from "@/lib/api/inbox";
-import { errorMessage } from "@/lib/api/mock";
+import { errorMessage } from "@/lib/api/errors";
 import { resizeImage } from "@/lib/image";
 import { MAX_DOCUMENT_MB, fileSize, toDocument } from "@/lib/files";
-import { cx } from "@/lib/format";
+import { cx, formatNaira } from "@/lib/format";
+import { SALE_FEE_RATE, saleFee } from "@/lib/fees";
 import { Alert, Field, MoneyInput, Select, SubmitButton, YesNo, booleanAnswer, inputClass, premiumAnswer, type YesNoValue } from "@/components/ui/form";
 import { dealTypeLabel, propertyTypeLabel, sharingFormulas, titleDocuments } from "@/components/listings/labels";
 import type { ListingSubmission, SubmittedDocument } from "@/lib/inbox/types";
@@ -40,6 +41,8 @@ const emptyForm = {
   description: "",
   highlights: "",
   isOwner: true,
+  /** Sale listings: the seller agrees to the facilitation fee before submitting. */
+  acceptedSaleFee: false,
   ownerName: "",
   fullName: "",
   email: "",
@@ -68,6 +71,7 @@ function validate(form: FormState, images: string[], documents: SubmittedDocumen
   if (!form.fullName.trim()) errors.fullName = "Enter your name.";
   if (!form.email.trim()) errors.email = "Enter your email.";
   if (!form.phoneNumber.trim()) errors.phoneNumber = "Enter a phone number we can call.";
+  if (form.dealType === "sale" && !form.acceptedSaleFee) errors.acceptedSaleFee = "Agree to the facilitation fee to submit a property for sale.";
   return errors;
 }
 
@@ -93,6 +97,7 @@ function formFromSubmission(submission: ListingSubmission): FormState {
     description: listing.description,
     highlights: listing.highlights.join("\n"),
     isOwner: submission.isOwner,
+    acceptedSaleFee: Boolean(listing.saleTerms?.acceptedFeeTerms),
     ownerName: submission.isOwner ? "" : listing.ownerName,
     fullName: contact.fullName,
     email: contact.email,
@@ -226,6 +231,7 @@ export function SubmitListingForm() {
               duration: form.duration.trim(),
             }
           : undefined,
+      saleTerms: form.dealType === "sale" && form.acceptedSaleFee ? { acceptedFeeTerms: true, feeRate: SALE_FEE_RATE } : undefined,
       ownerName: form.isOwner ? form.fullName.trim() : form.ownerName.trim(),
     },
   });
@@ -405,6 +411,8 @@ export function SubmitListingForm() {
             <MoneyInput id="price" value={form.price} onChange={(value) => set("price", value)} placeholder="e.g. 150,000,000" />
           </Field>
         </div>
+
+        {form.dealType === "sale" ? <SellerFee price={Number(form.price) || 0} /> : null}
 
         {form.dealType === "jv" ? (
           <div className="mt-6 grid gap-5 rounded-2xl bg-ivory p-5 sm:grid-cols-2">
@@ -597,6 +605,27 @@ export function SubmitListingForm() {
         </div>
       </Section>
 
+      {form.dealType === "sale" ? (
+        <div className={cx("rounded-2xl border p-5", errors.acceptedSaleFee ? "border-red-300 bg-red-50/40" : "border-line")}>
+          <p className="text-sm font-semibold text-ink">Facilitation fee terms</p>
+          <p className="mt-1 text-sm text-muted">
+            When your property sells through Joint Venture Assets, you pay a facilitation fee of{" "}
+            <strong className="text-ink">{SALE_FEE_RATE * 100}% of the agreed sale price</strong>, taken from the proceeds.
+            {Number(form.price) > 0 ? ` On your asking price that's ${formatNaira(saleFee(Number(form.price)))}.` : ""}
+          </p>
+          <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={form.acceptedSaleFee}
+              onChange={(event) => set("acceptedSaleFee", event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#c9a24a]"
+            />
+            I agree to pay the {SALE_FEE_RATE * 100}% facilitation fee from the sale price when my property sells.
+          </label>
+          {errors.acceptedSaleFee ? <p className="mt-1.5 text-xs font-medium text-red-700">{errors.acceptedSaleFee}</p> : null}
+        </div>
+      ) : null}
+
       {error ? <Alert tone="error">{error}</Alert> : null}
 
       <div className="sticky bottom-0 z-20 -mx-4 flex flex-col gap-3 border-t border-line bg-white/95 px-4 py-4 backdrop-blur sm:mx-0 sm:flex-row sm:items-center sm:rounded-2xl sm:border sm:px-5">
@@ -674,6 +703,33 @@ function DropZone({
       >
         {buttonLabel}
       </button>
+    </div>
+  );
+}
+
+/** What the seller would receive: the asking price less JVA's facilitation fee. */
+export function SellerFee({ price }: { price: number }) {
+  const fee = saleFee(price);
+  return (
+    <div className="mt-6 rounded-2xl bg-ivory p-5">
+      <p className="eyebrow text-gold-deep">What you&apos;d receive</p>
+      <dl className="mt-3 space-y-1.5 text-sm">
+        <div className="flex justify-between gap-3">
+          <dt className="text-muted">Asking price</dt>
+          <dd className="font-semibold text-ink tabular-nums">{price ? formatNaira(price) : "Enter a price"}</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-muted">JVA facilitation fee ({SALE_FEE_RATE * 100}%)</dt>
+          <dd className="font-semibold text-ink tabular-nums">{price ? `- ${formatNaira(fee)}` : ""}</dd>
+        </div>
+        <div className="flex justify-between gap-3 border-t border-line pt-1.5">
+          <dt className="font-semibold text-ink">You&apos;d receive</dt>
+          <dd className="font-bold text-ink tabular-nums">{price ? formatNaira(price - fee) : ""}</dd>
+        </div>
+      </dl>
+      <p className="mt-2 text-xs text-muted">
+        Worked out on your asking price. The fee is {SALE_FEE_RATE * 100}% of the final agreed price, paid from the proceeds when the sale completes.
+      </p>
     </div>
   );
 }

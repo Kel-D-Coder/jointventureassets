@@ -7,9 +7,20 @@ import { useSelector } from "react-redux"
 import { FiArrowLeft, FiEdit2, FiFileText, FiTrash2 } from "react-icons/fi"
 import { RootState } from "@/store/store"
 import { deleteRequest, getRequest } from "@/lib/api/requests"
-import { errorMessage } from "@/lib/api/mock"
+import { errorMessage } from "@/lib/api/errors"
 import { Alert } from "@/components/ui/form"
 import { StatusBadge, formatBudget, humanise, requestTypeLabel } from "@/components/requests/StatusBadge"
+import {
+  developmentTypes,
+  housingProposals,
+  jvPropertyKinds,
+  labelOf,
+  partnershipTypes,
+  propertiesWanted,
+  requestSummary,
+  sharingFormulas,
+  titleDocuments,
+} from "@/lib/requests"
 import type { PartnerRequest } from "@/types"
 
 const formatDate = (dateString: string) =>
@@ -122,25 +133,25 @@ export default function RequestDetails() {
           {error ? <Alert tone="error">{error}</Alert> : null}
 
           <section>
-            <h2 className="font-display text-2xl text-ink">Description</h2>
-            <p className="mt-3 leading-relaxed whitespace-pre-line text-gray-700">{request.description}</p>
+            <h2 className="font-display text-2xl text-ink">What you&apos;re looking for</h2>
+            <p className="mt-3 rounded-xl border border-gold/30 bg-gold-soft/40 p-4 font-medium text-ink">{requestSummary(request)}</p>
+            {otherNotes(request) ? <p className="mt-4 leading-relaxed whitespace-pre-line text-gray-700">{otherNotes(request)}</p> : null}
           </section>
 
           <dl className="grid gap-6 rounded-2xl border border-line p-6 sm:grid-cols-3">
-            <Detail label={request.requestType === "land" ? "Value" : "Budget"}>{formatBudget(request.budget)}</Detail>
+            <Detail label="Budget">{formatBudget(request.budget)}</Detail>
             <Detail label="Location">{request.location || "Not specified"}</Detail>
-            <Detail label="Timeline">{request.timeline || "Not specified"}</Detail>
-            {request.landSize ? <Detail label="Land size">{request.landSize}</Detail> : null}
-            {request.titleDocument ? <Detail label="Title document">{humanise(request.titleDocument)}</Detail> : null}
-            {request.sharingFormula ? (
-              <Detail label="Sharing formula">
-                {request.sharingFormula.replace("_", "/")}
-                {request.sharingNegotiable !== undefined ? ` (${request.sharingNegotiable ? "negotiable" : "fixed"})` : ""}
-              </Detail>
+            <Detail label="Needed by">{request.timeline || "Not specified"}</Detail>
+            {request.propertyWanted ? <Detail label="Looking for">{labelOf(request.requestType === "jv" ? jvPropertyKinds : propertiesWanted, request.propertyWanted)}</Detail> : null}
+            {request.developmentType ? <Detail label="Development">{labelOf(developmentTypes, request.developmentType)}</Detail> : null}
+            {request.partnershipType ? <Detail label="Professional">{labelOf(partnershipTypes, request.partnershipType)}</Detail> : null}
+            {request.landSize ? <Detail label="Size wanted">{request.landSize}</Detail> : null}
+            {request.housingProposal ? <Detail label="Plans to build">{labelOf(housingProposals, request.housingProposal)}</Detail> : null}
+            {request.sharingFormula ? <Detail label="Sharing formula">{labelOf(sharingFormulas, request.sharingFormula)}</Detail> : null}
+            {request.premium !== undefined && request.premium !== null ? (
+              <Detail label="Premium">{request.premium > 0 ? `Up to ${formatBudget(String(request.premium))}` : "No premium"}</Detail>
             ) : null}
-            {request.premium !== undefined ? <Detail label="Premium">{request.premium > 0 ? formatBudget(String(request.premium)) : "No premium"}</Detail> : null}
-            {request.housingProposal ? <Detail label="Proposal">{humanise(request.housingProposal)}</Detail> : null}
-            {request.propertyWanted ? <Detail label="Looking to buy">{request.propertyWanted}</Detail> : null}
+            {request.titleDocument ? <Detail label="Title accepted">{labelOf(titleDocuments, request.titleDocument)}</Detail> : null}
             {request.paymentMethod ? <Detail label="Payment">{request.paymentMethod}</Detail> : null}
             {request.updatedAt && request.updatedAt !== request.createdAt ? <Detail label="Last updated">{formatDate(request.updatedAt)}</Detail> : null}
           </dl>
@@ -206,4 +217,11 @@ export default function RequestDetails() {
       </div>
     </main>
   )
+}
+
+/** The description without the summary sentence it starts with, which is shown above it. */
+function otherNotes(request: PartnerRequest): string {
+  const summary = requestSummary(request)
+  const description = request.description ?? ""
+  return description.startsWith(summary) ? description.slice(summary.length).trim() : description
 }

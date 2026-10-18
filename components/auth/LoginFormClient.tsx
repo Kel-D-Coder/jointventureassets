@@ -6,11 +6,10 @@ import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { FiArrowRight } from "react-icons/fi";
 import { login } from "@/lib/api/auth";
-import { errorMessage } from "@/lib/api/mock";
+import { errorMessage } from "@/lib/api/errors";
 import { setCredentials } from "@/store/authSlice";
 import { AppDispatch } from "@/store/store";
 import { AuthShell } from "@/components/auth/AuthShell";
-import { DemoLoginHint } from "@/components/auth/DemoLoginHint";
 import { GoogleButton } from "@/components/auth/GoogleBtn";
 import { Alert, Field, PasswordInput, SubmitButton, inputClass } from "@/components/ui/form";
 
@@ -83,7 +82,6 @@ export default function LoginFormClient() {
         <span className="h-px flex-1 bg-line" /> or <span className="h-px flex-1 bg-line" />
       </div>
       <GoogleButton />
-      <DemoLoginHint onUse={(email, password) => setFormData({ email, password })} />
     </AuthShell>
   );
 }

@@ -1,6 +1,4 @@
-import { seedListings } from "@/lib/data/listings";
-import { ApiError, wait } from "@/lib/api/mock";
-import { sendEnquiry as sendInboxEnquiry } from "@/lib/api/inbox";
+import { SHOW_SAMPLE_LISTING, isSampleListing, sampleSaleListing } from "@/lib/data/sampleListing";
 import type { DealType, Listing, PropertyType } from "@/types";
 import type { ListingSubmission } from "@/lib/inbox/types";
 
@@ -16,9 +14,6 @@ export interface ListingQuery {
   q?: string;
   sort?: ListingSort;
 }
-
-/** Only live and under-offer listings are public; drafts and closed deals stay in the dashboard. */
-const publicListings = () => seedListings.filter((listing) => listing.status === "published" || listing.status === "under_offer");
 
 const sorters: Record<ListingSort, (a: Listing, b: Listing) => number> = {
   newest: (a, b) => b.createdAt.localeCompare(a.createdAt),
@@ -41,20 +36,20 @@ export function filterListings(listings: Listing[], query: ListingQuery): Listin
     .sort(sorters[query.sort ?? "newest"]);
 }
 
-/** GET /listings — every public listing; filtering happens on the page so tab counts stay live. */
-export async function getListings(): Promise<Listing[]> {
-  await wait();
-  return structuredClone(publicListings());
+/** Every public listing; filtering happens on the page so tab counts stay live. */
+export function getListings(): Promise<Listing[]> {
+  return getApprovedListings();
 }
 
-/** GET /listings?featured=true — for the homepage. */
+/** For the homepage: featured listings first, then the newest. */
 export async function getFeaturedListings(limit = 6): Promise<Listing[]> {
-  await wait(150, 150);
-  return structuredClone(publicListings().filter((listing) => listing.featured).slice(0, limit));
+  const listings = await getApprovedListings().catch((): Listing[] => []);
+  return [...listings].sort((a, b) => Number(b.featured) - Number(a.featured) || b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
 }
 
 /** GET /listings/{id} — tries the real backend first; returns null if not found or unreachable. */
 export async function getListing(id: string): Promise<Listing | null> {
+  if (SHOW_SAMPLE_LISTING && isSampleListing(id)) return structuredClone(sampleSaleListing);
   try {
     const response = await fetch(`${BASE}/listings/${id}`, {
       cache: "no-store",
@@ -69,16 +64,9 @@ export async function getListing(id: string): Promise<Listing | null> {
   }
 }
 
-/** Up to three other listings of the same deal type, nearest first. */
-export function similarListings(listing: Listing, limit = 3): Listing[] {
-  return publicListings()
-    .filter((other) => other.id !== listing.id && other.dealType === listing.dealType)
-    .sort((a, b) => Number(b.state === listing.state) - Number(a.state === listing.state))
-    .slice(0, limit);
-}
-
 /** Maps a backend ListingSubmission (approved) to the frontend Listing shape. */
 function submissionToListing(s: ListingSubmission): Listing {
+  const extras = s.listing as ListingSubmission["listing"] & { featured?: boolean; verified?: boolean; underOffer?: boolean };
   return {
     id: s.id,
     title: s.listing.title,
@@ -95,9 +83,9 @@ function submissionToListing(s: ListingSubmission): Listing {
     images: s.listing.images,
     jv: s.listing.jv ?? undefined,
     ownerName: s.listing.ownerName,
-    status: "published",
-    featured: false,
-    verified: true,
+    status: extras.underOffer ? "under_offer" : "published",
+    featured: Boolean(extras.featured),
+    verified: extras.verified ?? true,
     views: 0,
     enquiries: 0,
     createdAt: s.createdAt,
@@ -115,19 +103,9 @@ export async function getApprovedListings(): Promise<Listing[]> {
 
   if (!response.ok) throw new Error(`Server error ${response.status}`);
   const body = await response.json();
-  return ((body.listings ?? []) as ListingSubmission[]).map(submissionToListing);
-}
-
-/** Sends an enquiry about a listing to the shared demo inbox, where the admin dashboard picks it up. */
-export async function sendEnquiry(
-  listingId: string,
-  input: { fullName: string; email: string; phoneNumber: string; message: string },
-): Promise<{ message: string }> {
-  const listing = seedListings.find((candidate) => candidate.id === listingId);
-  if (!listing) throw new ApiError("This listing is no longer available.");
-  await sendInboxEnquiry({
-    ...input,
-    target: { type: "listing", id: listing.id, title: listing.title, subtitle: `${listing.area}, ${listing.city}`, image: listing.images[0] },
-  });
-  return { message: "Thanks. The JVA team will contact you within one working day." };
+  // A listing with a closing record is a closed deal; it stays in the admin dashboard.
+  const listings = ((body.listings ?? []) as Array<ListingSubmission & { listing: { closing?: unknown } }>)
+    .filter((submission) => !submission.listing.closing)
+    .map(submissionToListing);
+  return SHOW_SAMPLE_LISTING ? [...listings, structuredClone(sampleSaleListing)] : listings;
 }

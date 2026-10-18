@@ -1,6 +1,6 @@
 import { FiCheckCircle, FiClock, FiXCircle } from "react-icons/fi";
 import { cx } from "@/lib/format";
-import type { RequestStatus, RequestType } from "@/types";
+import type { RequestStatus } from "@/types";
 
 const statusStyles: Record<RequestStatus, { label: string; className: string; icon: typeof FiClock }> = {
   pending: { label: "Under review", className: "bg-amber-50 text-amber-800", icon: FiClock },
@@ -18,19 +18,7 @@ export function StatusBadge({ status, className }: { status: RequestStatus; clas
   );
 }
 
-export const requestTypeLabel: Record<RequestType, string> = {
-  land: "Land offer",
-  purchase: "Purchase request",
-  development: "Development",
-  partnership: "Partnership",
-};
-
-export const requestTypeHint: Record<RequestType, string> = {
-  land: "You have land or property and want a developer, investor or buyer.",
-  purchase: "You want to buy land or a building outright.",
-  development: "You have capital and want land or a project to develop.",
-  partnership: "You want a mandate, lawyer, consultant or building expert.",
-};
+export { requestTypeHint, requestTypeLabel } from "@/lib/requests";
 
 /** "1450000000" or "₦1,450,000,000" -> "₦1.45bn"; free text is shown as typed. */
 export function formatBudget(budget: string): string {

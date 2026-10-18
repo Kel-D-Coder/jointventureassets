@@ -4,7 +4,7 @@ import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FiArrowRight } from "react-icons/fi";
 import { resendResetCode, verifyResetCode } from "@/lib/api/auth";
-import { errorMessage } from "@/lib/api/mock";
+import { errorMessage } from "@/lib/api/errors";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Alert, SubmitButton } from "@/components/ui/form";
 

@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getApprovedListings } from "@/lib/api/listings";
 import { FiArrowLeft, FiCheck, FiCheckCircle, FiMapPin, FiStar } from "react-icons/fi";
-import { getListing, similarListings } from "@/lib/api/listings";
+import { getListing } from "@/lib/api/listings";
 import { EnquiryForm } from "@/components/enquiries/EnquiryForm";
 import { ListingGallery } from "@/components/listings/ListingGallery";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { propertyTypeLabel } from "@/components/listings/labels";
 import { formatNaira, formatSize, premiumText } from "@/lib/format";
+import { isSampleListing } from "@/lib/data/sampleListing";
 import type { Listing } from "@/types";
 
 type Props = { params: Promise<{ id: string }> };
@@ -174,6 +175,8 @@ export default async function ListingDetailPage({ params }: Props) {
                 target={{ type: "listing", id: listing.id, title: listing.title, subtitle: `${listing.area}, ${listing.city}`, image: listing.images[0] }}
                 eyebrow={listing.dealType === "jv" ? "Joint venture enquiry" : "Purchase enquiry"}
                 jointVenture={listing.dealType === "jv"}
+                salePrice={listing.dealType === "sale" ? listing.price : undefined}
+                sample={isSampleListing(listing.id)}
                 defaultMessage={
                   listing.dealType === "jv"
                     ? `I'm interested in partnering on "${listing.title}". Please share the full JV terms.`

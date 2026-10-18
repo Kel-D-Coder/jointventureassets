@@ -1,5 +1,5 @@
 import { uploadFile } from "@/lib/api/auth";
-import type { InboxEnquiry, ListingSubmission, NewEnquiry, SubmittedDocument } from "@/lib/inbox/types";
+import type { ListingSubmission, NewEnquiry, SubmittedDocument } from "@/lib/inbox/types";
 
 // ── Listing submissions → real FastAPI backend ──────────────────────────────
 
@@ -38,6 +38,7 @@ export type SubmissionInput = {
     highlights: string[];
     images: string[];
     jv?: { sharingFormula: string; sharingNegotiable?: boolean; premium?: number; proposal: string; duration: string };
+    saleTerms?: { acceptedFeeTerms: true; feeRate: number };
     ownerName: string;
   };
 };
@@ -120,18 +121,46 @@ export async function getMySubmissions(token: string): Promise<ListingSubmission
 
 // ── Enquiries → demo inbox (listings are still seed data) ───────────────────
 
-const DEMO_BASE = "/api/demo-inbox";
-
-async function demoCall<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, headers: { "Content-Type": "application/json" } }).catch(() => {
-    throw new Error("Couldn't reach the server.");
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error((body as { message?: string }).message ?? "Something went wrong.");
-  return body as T;
-}
-
-/** POST an enquiry about a listing or a member's request. */
-export function sendEnquiry(input: Omit<NewEnquiry, "kind">): Promise<InboxEnquiry> {
-  return demoCall(DEMO_BASE, { method: "POST", body: JSON.stringify({ ...input, kind: "enquiry" }) });
+/**
+ * Sends an enquiry about a listing or a member's request. The server has no
+ * enquiries endpoint yet, so it goes through POST /contact with the details
+ * attached; the JVA team receives it with the other contact messages.
+ * TODO(backend): switch to a dedicated enquiries endpoint when there is one.
+ */
+export async function sendEnquiry(input: Omit<NewEnquiry, "kind">, token?: string | null): Promise<void> {
+  let letterheadUrl: string | undefined;
+  if (input.jv?.letterhead) {
+    if (!token) throw new Error("Please log in to upload your letterhead, so we can prepare your LOI on it.");
+    letterheadUrl = await uploadDataUrl(input.jv.letterhead.url, input.jv.letterhead.name, token);
+  }
+  const about = `${input.target.type === "listing" ? "Listing" : "Request"}: ${input.target.title} (${input.target.id})`;
+  const jvLines = input.jv
+    ? [
+        `Wants JVA to prepare their LOI: ${input.jv.generateLoi ? "Yes" : "No"}`,
+        letterheadUrl ? `Letterhead: ${letterheadUrl}` : "",
+        "Accepted the facilitation fee terms (10% of land value, non-negotiable): Yes",
+      ].filter(Boolean)
+    : [];
+  const saleLines = input.sale
+    ? [
+        `Accepted the facilitation fee terms (${input.sale.feeRate * 100}% of the agreed price, paid on top of the price): Yes`,
+        `Asking price: ₦${input.sale.askingPrice.toLocaleString("en-NG")}`,
+      ]
+    : [];
+  await call(
+    "/contact",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        fullName: input.fullName,
+        emailAddress: input.email,
+        phoneNumber: input.phoneNumber,
+        consultationType: input.target.type === "listing" ? "Listing enquiry" : "Request enquiry",
+        subject: `Enquiry: ${input.target.title}`,
+        message: [input.message, "", about, ...jvLines, ...saleLines].join("\n"),
+        enquiry: { target: input.target, sale: input.sale, jv: input.jv ? { ...input.jv, letterhead: letterheadUrl ? { ...input.jv.letterhead, url: letterheadUrl } : undefined } : undefined },
+      }),
+    },
+    token ?? undefined,
+  );
 }
