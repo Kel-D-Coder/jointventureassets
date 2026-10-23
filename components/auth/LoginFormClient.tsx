@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { FiArrowRight } from "react-icons/fi";
 import { login } from "@/lib/api/auth";
@@ -16,6 +16,11 @@ import { Alert, Field, PasswordInput, SubmitButton, inputClass } from "@/compone
 export default function LoginFormClient() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
+  const params = useSearchParams();
+  const expired = params.get("expired") === "1";
+  // Back to the page they were on when the session ended; only paths on this site.
+  const next = params.get("next");
+  const destination = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +32,7 @@ export default function LoginFormClient() {
       setError(null);
       const response = await login(formData.email, formData.password);
       dispatch(setCredentials({ user: response.user, token: response.token }));
-      router.push("/dashboard");
+      router.push(destination);
     } catch (error: unknown) {
       setError(errorMessage(error, "Something went wrong. Please try again."));
       setLoading(false);
@@ -71,6 +76,7 @@ export default function LoginFormClient() {
           <PasswordInput id="password" name="password" autoComplete="current-password" value={formData.password} onChange={handleChange} required />
         </Field>
 
+        {expired && !error ? <Alert tone="info">Your session has expired. Please log in again.</Alert> : null}
         {error ? <Alert tone="error">{error}</Alert> : null}
 
         <SubmitButton loading={loading} loadingText="Logging in…">

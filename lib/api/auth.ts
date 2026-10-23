@@ -1,3 +1,4 @@
+import { API_TIMEOUT_MS, fetchFailure, reportUnauthorized } from "@/lib/api/session";
 import type { AuthUser } from "@/types";
 import type { ProfileDocuments } from "@/lib/inbox/types";
 
@@ -22,13 +23,12 @@ async function call<T>(path: string, init?: RequestInit, token?: string): Promis
   const response = await fetch(`${BASE}${path}`, {
     ...init,
     headers,
-    signal: AbortSignal.timeout(15000),
-  }).catch((err: unknown) => {
-    if (err instanceof DOMException && err.name === "TimeoutError") {
-      throw new Error("The server took too long to respond. Please try again.");
-    }
-    throw new Error("Couldn't reach the server. Check your connection and try again.");
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+  }).catch((caught: unknown) => {
+    throw fetchFailure(caught);
   });
+
+  reportUnauthorized(response, Boolean(token));
 
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error((body as { message?: string }).message ?? "Something went wrong. Please try again.");
@@ -39,7 +39,6 @@ async function call<T>(path: string, init?: RequestInit, token?: string): Promis
 export function register(input: {
   fullName: string;
   email: string;
-  phoneNumber: string;
   password: string;
   confirmPassword: string;
   role: string;
@@ -92,19 +91,34 @@ export async function uploadFile(file: File, token: string): Promise<string> {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: form,
-    signal: AbortSignal.timeout(60000),
-  }).catch(() => {
-    throw new Error("Couldn't upload the file. Check your connection and try again.");
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+  }).catch((caught: unknown) => {
+    throw fetchFailure(caught);
   });
+
+  reportUnauthorized(response, Boolean(token));
 
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error((body as { message?: string }).message ?? "Upload failed.");
   return (body as { url: string }).url;
 }
 
+const ACCOUNT_STATUSES: ReadonlyArray<MemberAccount["status"]> = ["pending", "active", "suspended"];
+
+/**
+ * The server's account status is "pending", "active" or "suspended". Anything
+ * else (or nothing) is treated as "pending", so an unexpected value can never
+ * show a member as approved. Matches toAccountStatus in the admin dashboard.
+ */
+function toAccountStatus(status: unknown): MemberAccount["status"] {
+  return ACCOUNT_STATUSES.find((known) => known === status) ?? "pending";
+}
+
 /** GET /user/me — requires auth token stored in Redux */
-export function getMyAccount(_userId: string, token?: string): Promise<MemberAccount> {
-  return call("/user/me", undefined, token);
+export async function getMyAccount(_userId: string, token?: string): Promise<MemberAccount> {
+  const account = await call<MemberAccount>("/user/me", undefined, token);
+  // profileCompleted is a true/false boolean on the server; only a real true counts.
+  return { ...account, status: toAccountStatus(account.status), profileCompleted: account.profileCompleted === true };
 }
 
 type MemberAccount = import("@/lib/inbox/types").MemberAccount;

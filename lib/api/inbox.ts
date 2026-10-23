@@ -1,3 +1,4 @@
+import { API_TIMEOUT_MS, fetchFailure, reportUnauthorized } from "@/lib/api/session";
 import { uploadFile } from "@/lib/api/auth";
 import type { ListingSubmission, NewEnquiry, SubmittedDocument } from "@/lib/inbox/types";
 
@@ -11,10 +12,11 @@ async function call<T>(path: string, init?: RequestInit, token?: string): Promis
   const response = await fetch(`${BASE}${path}`, {
     ...init,
     headers,
-    signal: AbortSignal.timeout(60000),
-  }).catch(() => {
-    throw new Error("Couldn't reach the server. Check your connection and try again.");
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+  }).catch((caught: unknown) => {
+    throw fetchFailure(caught);
   });
+  reportUnauthorized(response, Boolean(token));
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error((body as { message?: string }).message ?? "Something went wrong.");
   return body as T;

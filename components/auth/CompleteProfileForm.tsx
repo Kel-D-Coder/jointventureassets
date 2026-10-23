@@ -10,6 +10,7 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { SignupSteps } from "@/components/auth/SignupSteps";
 import { ProfileFields, profileFieldsFor } from "@/components/auth/ProfileFields";
 import { InvestorDocuments } from "@/components/auth/InvestorDocuments";
+import { BuyerDocuments } from "@/components/auth/BuyerDocuments";
 import { Alert, Field, SubmitButton, inputClass } from "@/components/ui/form";
 import type { ProfileDocuments } from "@/lib/inbox/types";
 
@@ -20,7 +21,6 @@ interface CompleteProfileFormProps {
 
 export default function CompleteProfileForm({ role = "Investor", category = "Cooperative" }: CompleteProfileFormProps) {
   const router = useRouter();
-  const userId = useAppSelector((state) => state.auth.user?.id);
   const token = useAppSelector((state) => state.auth.token);
   const fields = useMemo(() => profileFieldsFor(role, category), [role, category]);
   const [profile, setProfile] = useState<Record<string, string>>({});
@@ -31,7 +31,7 @@ export default function CompleteProfileForm({ role = "Investor", category = "Coo
   const [error, setError] = useState<string | null>(null);
 
   const isInvestor = role === "Investor";
-
+  const isBuyer = role === "Buyer";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +43,7 @@ export default function CompleteProfileForm({ role = "Investor", category = "Coo
     try {
       setLoading(true);
       setError(null);
-      await updateProfile(token ?? "", { phoneNumber, profile, ...(isInvestor ? { documents } : {}) });
+      await updateProfile(token ?? "", { phoneNumber: phoneNumber.trim(), profile, ...(isInvestor || isBuyer ? { documents } : {}) });
       router.push("/dashboard");
     } catch (error: unknown) {
       setError(errorMessage(error, "Something went wrong. Please try again."));
@@ -56,8 +56,8 @@ export default function CompleteProfileForm({ role = "Investor", category = "Coo
       wide
       eyebrow={`${role} · ${category}`}
       title="Complete your profile"
+      hideBack
       intro="Our team reviews every profile before approving an account. You can update these details later from your dashboard."
-      back={{ href: "/dashboard", label: "Skip for now" }}
     >
       <SignupSteps current={3} />
       <form onSubmit={handleSubmit} className="rounded-2xl border border-line bg-white p-6 sm:p-8">
@@ -72,6 +72,7 @@ export default function CompleteProfileForm({ role = "Investor", category = "Coo
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
               className={inputClass}
+              placeholder="+234"
               required
             />
           </Field>
@@ -86,6 +87,7 @@ export default function CompleteProfileForm({ role = "Investor", category = "Coo
               token={token ?? undefined}
             />
           ) : null}
+          {isBuyer ? <BuyerDocuments value={documents} onChange={setDocuments} token={token ?? undefined} /> : null}
         </div>
 
         {error ? <Alert tone="error" className="mt-6">{error}</Alert> : null}

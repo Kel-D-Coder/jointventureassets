@@ -1,3 +1,4 @@
+import { API_TIMEOUT_MS, fetchFailure } from "@/lib/api/session";
 import { SHOW_SAMPLE_LISTING, isSampleListing, sampleSaleListing } from "@/lib/data/sampleListing";
 import type { DealType, Listing, PropertyType } from "@/types";
 import type { ListingSubmission } from "@/lib/inbox/types";
@@ -53,7 +54,7 @@ export async function getListing(id: string): Promise<Listing | null> {
   try {
     const response = await fetch(`${BASE}/listings/${id}`, {
       cache: "no-store",
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
     if (response.status === 404) return null;
     if (!response.ok) throw new Error();
@@ -96,9 +97,9 @@ function submissionToListing(s: ListingSubmission): Listing {
 export async function getApprovedListings(): Promise<Listing[]> {
   const response = await fetch(`${BASE}/listings/approved`, {
     cache: "no-store",
-    signal: AbortSignal.timeout(15000),
-  }).catch(() => {
-    throw new Error("Couldn't reach the server.");
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+  }).catch((caught: unknown) => {
+    throw fetchFailure(caught);
   });
 
   if (!response.ok) throw new Error(`Server error ${response.status}`);

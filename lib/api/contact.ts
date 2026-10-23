@@ -1,3 +1,4 @@
+import { API_TIMEOUT_MS, fetchFailure, reportUnauthorized } from "@/lib/api/session";
 const BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? "";
 
 export interface ContactInput {
@@ -21,10 +22,12 @@ export async function sendContactMessage(
     method: "POST",
     headers,
     body: JSON.stringify(input),
-    signal: AbortSignal.timeout(15000),
-  }).catch(() => {
-    throw new Error("Couldn't reach the server. Check your connection and try again.");
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+  }).catch((caught: unknown) => {
+    throw fetchFailure(caught);
   });
+
+  reportUnauthorized(response, Boolean(token));
 
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error((body as { message?: string }).message ?? "Something went wrong. Please try again.");

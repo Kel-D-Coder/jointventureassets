@@ -9,6 +9,7 @@ import { getMyAccount, updateProfile } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
 import { ProfileFields, profileFieldsFor } from "@/components/auth/ProfileFields";
 import { InvestorDocuments } from "@/components/auth/InvestorDocuments";
+import { BuyerDocuments } from "@/components/auth/BuyerDocuments";
 import { Alert, Field, SubmitButton, inputClass } from "@/components/ui/form";
 import { cx } from "@/lib/format";
 import type { AccountStatus, MemberAccount, ProfileDocuments } from "@/lib/inbox/types";
@@ -46,6 +47,9 @@ export default function ProfilePage() {
     setLoadError("");
     getMyAccount(user.id, token ?? undefined)
       .then((loaded) => {
+        // TEMP: see exactly what GET /user/me returns, and the status the approval banner reads.
+        console.log("[profile] GET /user/me response:", loaded);
+        console.log("[profile] account status used for approval (after mapping):", loaded?.status);
         setAccount(loaded);
         setFullName(loaded.fullName);
         setPhoneNumber(loaded.phoneNumber);
@@ -61,6 +65,7 @@ export default function ProfilePage() {
   if (!isAuthenticated || !user) return null;
 
   const isInvestor = account?.role === "Investor";
+  const isBuyer = account?.role === "Buyer";
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -71,7 +76,7 @@ export default function ProfilePage() {
     setSaving(true);
     setNotice(null);
     try {
-      await updateProfile(token ?? "", { phoneNumber, profile, ...(isInvestor ? { documents } : {}) });
+      await updateProfile(token ?? "", { phoneNumber, profile, ...(isInvestor || isBuyer ? { documents } : {}) });
       const updated = await getMyAccount(user.id, token ?? undefined);
       setAccount(updated);
       setNotice({ tone: "success", text: "Profile saved. Our team sees your changes straight away." });
@@ -138,6 +143,7 @@ export default function ProfilePage() {
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
                 <ProfileFields fields={fields} values={profile} onChange={(name, value) => setProfile((current) => ({ ...current, [name]: value }))} />
                 {isInvestor ? <InvestorDocuments value={documents} onChange={setDocuments} token={token ?? undefined} /> : null}
+                {isBuyer ? <BuyerDocuments value={documents} onChange={setDocuments} token={token ?? undefined} /> : null}
               </div>
             </section>
 

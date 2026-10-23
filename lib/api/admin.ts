@@ -1,3 +1,4 @@
+import { API_TIMEOUT_MS, fetchFailure, reportUnauthorized } from "@/lib/api/session";
 import type { ListingSubmission, SubmissionStatus } from "@/lib/inbox/types";
 
 const BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? "";
@@ -8,10 +9,11 @@ async function call<T>(path: string, init?: RequestInit, token?: string): Promis
   const response = await fetch(`${BASE}${path}`, {
     ...init,
     headers,
-    signal: AbortSignal.timeout(15000),
-  }).catch(() => {
-    throw new Error("Couldn't reach the server.");
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+  }).catch((caught: unknown) => {
+    throw fetchFailure(caught);
   });
+  reportUnauthorized(response, Boolean(token));
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error((body as { message?: string }).message ?? "Something went wrong.");
   return body as T;

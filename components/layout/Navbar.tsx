@@ -9,7 +9,6 @@ import { RootState, AppDispatch } from "@/store/store";
 import { logout } from "@/store/authSlice";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { isTokenExpired } from "@/utils/decodeToken";
 import { Toaster } from "react-hot-toast";
 import { ADMIN_DASHBOARD_URL, mainNav } from "@/lib/site";
 import { cx } from "@/lib/format";
@@ -19,7 +18,7 @@ import Logo from "@/assets/logo/jva_2-removebg-preview.png"
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user, isAuthenticated, token } = useSelector((state: RootState) => state.auth);
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const pathname = usePathname();
@@ -33,11 +32,6 @@ export default function Navbar() {
     setMenuOpen(false);
     router.push("/");
   };
-
-  // Sign out once the session token has expired.
-  useEffect(() => {
-    if (token && isTokenExpired(token)) dispatch(logout());
-  }, [token, dispatch]);
 
   // While the mobile menu is open: stop the page scrolling behind it, and let Escape close it.
   useEffect(() => {

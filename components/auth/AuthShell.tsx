@@ -19,6 +19,7 @@ export function AuthShell({
   footer,
   wide = false,
   back,
+  hideBack = false,
 }: {
   eyebrow?: string;
   title: string;
@@ -28,6 +29,8 @@ export function AuthShell({
   /** Wider column for multi-column choices (role picker, profile form). */
   wide?: boolean;
   back?: { href: string; label: string };
+  /** No way out of the page, e.g. "Complete your profile", which must be filled in. */
+  hideBack?: boolean;
 }) {
   return (
     <div className="grid min-h-svh bg-ivory lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
@@ -57,7 +60,7 @@ export function AuthShell({
           <Link href="/" className="lg:hidden" aria-label="Joint Venture Assets home">
             <Image src={Logo} alt="" width={96} height={96} className="h-12 w-auto" />
           </Link>
-          {back ? (
+          {hideBack ? null : back ? (
             <Link href={back.href} className="ml-auto inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
               <FiArrowLeft aria-hidden="true" /> {back.label}
             </Link>

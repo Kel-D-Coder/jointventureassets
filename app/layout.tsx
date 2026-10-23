@@ -4,6 +4,7 @@ import "./globals.css";
 import NavbarWrapper from "@/components/layout/NavbarWrapper";
 import FooterWrapper from "@/components/layout/FooterWrapper";
 import StoreProvider from "@/store/StoreProvider";
+import { SessionWatcher } from "@/components/auth/SessionWatcher";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import CookieConsentBanner from "@/components/layout/CookieConsentBanner";
 
@@ -54,6 +55,7 @@ export default function RootLayout({
         className={`${manrope.variable} ${fraunces.variable} antialiased`}
       >
         <StoreProvider>
+          <SessionWatcher />
           <NavbarWrapper />
           {children}
           <CookieConsentBanner />
