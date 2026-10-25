@@ -3,6 +3,7 @@ import Image from "next/image";
 import { FaFacebookF, FaLinkedinIn, FaWhatsapp } from "react-icons/fa";
 import logo from "@/assets/logo/jva_2-removebg-preview.png"
 import { CONTACT_EMAIL, WHATSAPP_URL } from "@/lib/site";
+import { PanelDecor } from "@/components/ui/PanelDecor";
 
 const columns = [
   {
@@ -35,8 +36,10 @@ const columns = [
 
 export default function Footer() {
   return (
-    <footer className="bg-ink text-gray-300">
-      <div className="mx-auto grid max-w-7xl gap-12 px-4 pt-16 pb-10 sm:px-6 lg:grid-cols-[1.4fr_2fr] lg:px-8">
+    <footer className="relative overflow-hidden bg-ink text-gray-300">
+      <PanelDecor glow="bottom-left" />
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-gold/50 to-transparent" />
+      <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pt-16 pb-10 sm:px-6 lg:grid-cols-[1.4fr_2fr] lg:px-8">
         <div>
           <Link href="/" aria-label="Joint Venture Assets home">
             <Image src={logo} alt="" width={120} height={120} className="h-20 w-auto" />
@@ -61,7 +64,7 @@ export default function Footer() {
         <div className="grid gap-10 sm:grid-cols-3">
           {columns.map((column) => (
             <div key={column.title}>
-              <p className="eyebrow text-gold">{column.title}</p>
+              <p className="text-xs font-bold tracking-[0.18em] text-gold uppercase">{column.title}</p>
               <ul className="mt-4 space-y-3 text-sm">
                 {column.links.map((link) => (
                   <li key={link.href}>
@@ -76,7 +79,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-white/10">
+      <div className="relative border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <p>© {new Date().getFullYear()} Joint Venture Assets. All rights reserved.</p>
           <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-white">

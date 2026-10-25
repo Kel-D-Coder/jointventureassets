@@ -8,6 +8,7 @@ import { FiArrowRight, FiMapPin, FiPhoneCall, FiSearch } from "react-icons/fi";
 import heroImage from "@/assets/IMG-20251018-WA0010.jpg";
 import { cx } from "@/lib/format";
 import { PHONE_NUMBERS } from "@/lib/site";
+import { PanelDecor } from "@/components/ui/PanelDecor";
 
 type Kind = "all" | "land" | "building";
 
@@ -41,6 +42,8 @@ export function Hero({ stats }: { stats: HeroStat[] }) {
     <section className="relative overflow-hidden bg-ink">
       <Image src={heroImage} alt="" fill priority sizes="100vw" className="object-cover opacity-40" />
       <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/30" />
+      <PanelDecor />
+      <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent via-gold/50 to-transparent" />
 
       <div className="relative mx-auto max-w-7xl px-4 pt-20 pb-16 sm:px-6 sm:pt-28 lg:px-8 lg:pt-32 lg:pb-24">
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut" }} className="max-w-3xl">
@@ -61,7 +64,7 @@ export function Hero({ stats }: { stats: HeroStat[] }) {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
-          className="mt-10 max-w-4xl rounded-2xl bg-white p-2.5 shadow-2xl"
+          className="mt-10 max-w-4xl rounded-2xl bg-white p-2.5 shadow-[0_30px_70px_-30px_rgb(0_0_0/0.8)] ring-1 ring-gold/30"
           role="search"
         >
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
@@ -93,7 +96,7 @@ export function Hero({ stats }: { stats: HeroStat[] }) {
                 className="w-full bg-transparent text-sm font-medium text-ink outline-none placeholder:text-gray-400"
               />
             </label>
-            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-6 py-3 text-sm font-bold text-ink transition-colors hover:bg-gold/85">
+            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-6 py-3 text-sm font-bold text-ink shadow-[0_8px_24px_-8px_rgb(201_162_74/0.7)] transition hover:bg-gold-soft">
               <FiSearch aria-hidden="true" /> Search listings
             </button>
           </div>
@@ -123,17 +126,17 @@ export function Hero({ stats }: { stats: HeroStat[] }) {
         <div className="mt-12 flex flex-wrap items-center gap-x-10 gap-y-6">
           <dl className="flex flex-wrap gap-x-10 gap-y-4">
             {stats.map((stat) => (
-              <div key={stat.label}>
+              <div key={stat.label} className="border-l-2 border-gold/60 pl-4">
                 <dt className="sr-only">{stat.label}</dt>
                 <dd>
-                  <span className="block font-display text-3xl text-white">{stat.value}</span>
-                  <span className="text-sm text-gray-400">{stat.label}</span>
+                  <span className="block font-display text-4xl leading-none text-white">{stat.value}</span>
+                  <span className="mt-1.5 block text-sm text-white/55">{stat.label}</span>
                 </dd>
               </div>
             ))}
           </dl>
-          <a href="/how-it-works" className="inline-flex items-center gap-2 text-sm font-semibold text-white underline-offset-4 hover:underline">
-            How a joint venture works <FiArrowRight aria-hidden="true" />
+          <a href="/how-it-works" className="group inline-flex items-center gap-2 text-sm font-semibold text-white underline-offset-4 hover:underline">
+            How a joint venture works <FiArrowRight aria-hidden="true" className="text-gold transition-transform group-hover:translate-x-0.5" />
           </a>
         </div>
       </div>

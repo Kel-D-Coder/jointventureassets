@@ -6,6 +6,7 @@ import { useAppSelector } from "@/hooks/hooks";
 import { getAdminSubmissions, updateSubmissionStatus } from "@/lib/api/admin";
 import type { ListingSubmission, SubmissionStatus } from "@/lib/inbox/types";
 import { formatNaira } from "@/lib/format";
+import { isVideoUrl } from "@/lib/videoWatermark";
 
 const STATUS_TABS: Array<{ value: string | undefined; label: string }> = [
   { value: undefined, label: "All" },
@@ -175,7 +176,7 @@ export default function AdminListings() {
               {/* Listing images preview */}
               {sub.listing.images.length > 0 ? (
                 <div className="mt-3 flex gap-2 overflow-x-auto">
-                  {sub.listing.images.slice(0, 4).map((src, i) => (
+                  {sub.listing.images.filter((src) => !isVideoUrl(src)).slice(0, 4).map((src, i) => (
                     <img
                       key={i}
                       src={src}

@@ -114,9 +114,15 @@ function toAccountStatus(status: unknown): MemberAccount["status"] {
   return ACCOUNT_STATUSES.find((known) => known === status) ?? "pending";
 }
 
-/** GET /user/me — requires auth token stored in Redux */
+/**
+ * GET /user/me — requires auth token stored in Redux.
+ * The server wraps its replies: { "status": true, "user": { ...account } }. That outer
+ * "status" only means the request succeeded; the account's own status is inside.
+ */
 export async function getMyAccount(_userId: string, token?: string): Promise<MemberAccount> {
-  const account = await call<MemberAccount>("/user/me", undefined, token);
+  const body = await call<Record<string, unknown>>("/user/me", undefined, token);
+  const inner = [body.user, body.account, body.data].find((value) => value && typeof value === "object");
+  const account = (inner ?? body) as MemberAccount;
   // profileCompleted is a true/false boolean on the server; only a real true counts.
   return { ...account, status: toAccountStatus(account.status), profileCompleted: account.profileCompleted === true };
 }

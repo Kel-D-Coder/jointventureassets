@@ -18,6 +18,7 @@ export default function SubmitListingPage() {
   return (
     <main className="bg-white pb-24">
       <PageHero
+        tone="dark"
         eyebrow="List your property"
         title="Put your land or property in front of serious partners"
         intro="For a joint venture or an outright sale. Listing is free; a facilitation fee applies only when a deal completes."

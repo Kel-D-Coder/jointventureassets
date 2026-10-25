@@ -2,6 +2,7 @@ import { API_TIMEOUT_MS, fetchFailure } from "@/lib/api/session";
 import { SHOW_SAMPLE_LISTING, isSampleListing, sampleSaleListing } from "@/lib/data/sampleListing";
 import type { DealType, Listing, PropertyType } from "@/types";
 import type { ListingSubmission } from "@/lib/inbox/types";
+import { joinMedia, splitMedia } from "@/lib/videoWatermark";
 
 const BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? "";
 
@@ -42,58 +43,112 @@ export function getListings(): Promise<Listing[]> {
   return getApprovedListings();
 }
 
-/** For the homepage: featured listings first, then the newest. */
+/** For the homepage: only listings ticked "Feature on the homepage" in the admin, newest first. */
 export async function getFeaturedListings(limit = 6): Promise<Listing[]> {
   const listings = await getApprovedListings().catch((): Listing[] => []);
-  return [...listings].sort((a, b) => Number(b.featured) - Number(a.featured) || b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
+  return listings
+    .filter((listing) => listing.featured)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
 }
 
-/** GET /listings/{id} — tries the real backend first; returns null if not found or unreachable. */
+/** GET /listings/{id}: one listing (either shape), or null if it isn't public, doesn't exist or the server can't be reached. */
 export async function getListing(id: string): Promise<Listing | null> {
   if (SHOW_SAMPLE_LISTING && isSampleListing(id)) return structuredClone(sampleSaleListing);
   try {
-    const response = await fetch(`${BASE}/listings/${id}`, {
+    const response = await fetch(`${BASE}/listings/${encodeURIComponent(id)}`, {
       cache: "no-store",
       signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
     if (response.status === 404) return null;
     if (!response.ok) throw new Error();
-    const body = await response.json();
-    return submissionToListing(body.listing as ListingSubmission);
+    const body = (await response.json()) as { listing?: ServerListing };
+    return body.listing ? toPublicListing(body.listing) : null;
   } catch {
     return null;
   }
 }
 
-/** Maps a backend ListingSubmission (approved) to the frontend Listing shape. */
-function submissionToListing(s: ListingSubmission): Listing {
-  const extras = s.listing as ListingSubmission["listing"] & { featured?: boolean; verified?: boolean; underOffer?: boolean };
+/** Fields the server may add to a listing beyond the website's form. */
+type ListingExtras = {
+  featured?: boolean;
+  verified?: boolean;
+  underOffer?: boolean;
+  closing?: unknown;
+  views?: number;
+  status?: string;
+};
+
+/**
+ * The server returns listings in two shapes, mixed in the same list:
+ *  - created in the admin dashboard: the listing's fields at the top level,
+ *    with its own status ("published", "under_offer", "draft", "closed");
+ *  - an approved member submission: the fields nested under `listing`.
+ */
+type ServerListing =
+  | (Partial<Listing> & ListingExtras & { id: string; listing?: undefined })
+  | (ListingSubmission & { listing: ListingSubmission["listing"] & ListingExtras });
+
+/** Either shape as a public listing, or null if it shouldn't be shown (draft, closed, or a closed deal). */
+function toPublicListing(raw: ServerListing): Listing | null {
+  if (raw.listing) {
+    // Member submission: only approved ones are public; one with a closing record is a closed deal.
+    if (raw.status !== "approved" || raw.listing.closing) return null;
+    const l = raw.listing;
+    return {
+      id: raw.id,
+      title: l.title,
+      dealType: l.dealType as DealType,
+      propertyType: l.propertyType as PropertyType,
+      area: l.area,
+      city: l.city,
+      state: l.state,
+      sizeSqm: Number(l.sizeSqm) || 0,
+      price: Number(l.price) || 0,
+      titleDocument: l.titleDocument,
+      description: l.description,
+      highlights: l.highlights ?? [],
+      ...splitMedia(joinMedia(l.images, l.videos)),
+      jv: l.jv ?? undefined,
+      ownerName: l.ownerName,
+      status: l.underOffer ? "under_offer" : "published",
+      featured: Boolean(l.featured),
+      verified: l.verified ?? true,
+      views: Number(l.views) || 0,
+      enquiries: 0,
+      createdAt: raw.createdAt,
+    };
+  }
+
+  // Admin listing: only live and under-offer ones are public.
+  const status = raw.status === "under_offer" ? "under_offer" : raw.status === "published" ? "published" : null;
+  if (!status || raw.closing) return null;
   return {
-    id: s.id,
-    title: s.listing.title,
-    dealType: s.listing.dealType as DealType,
-    propertyType: s.listing.propertyType as PropertyType,
-    area: s.listing.area,
-    city: s.listing.city,
-    state: s.listing.state,
-    sizeSqm: s.listing.sizeSqm,
-    price: s.listing.price,
-    titleDocument: s.listing.titleDocument,
-    description: s.listing.description,
-    highlights: s.listing.highlights,
-    images: s.listing.images,
-    jv: s.listing.jv ?? undefined,
-    ownerName: s.listing.ownerName,
-    status: extras.underOffer ? "under_offer" : "published",
-    featured: Boolean(extras.featured),
-    verified: extras.verified ?? true,
-    views: 0,
+    id: raw.id,
+    title: raw.title ?? "",
+    dealType: (raw.dealType ?? "sale") as DealType,
+    propertyType: (raw.propertyType ?? "land") as PropertyType,
+    area: raw.area ?? "",
+    city: raw.city ?? "",
+    state: raw.state ?? "",
+    sizeSqm: Number(raw.sizeSqm) || 0,
+    price: Number(raw.price) || 0,
+    titleDocument: raw.titleDocument ?? "",
+    description: raw.description ?? "",
+    highlights: raw.highlights ?? [],
+    ...splitMedia(joinMedia(raw.images, raw.videos)),
+    jv: raw.jv ?? undefined,
+    ownerName: raw.ownerName ?? "Joint Venture Assets",
+    status,
+    featured: Boolean(raw.featured),
+    verified: raw.verified ?? true,
+    views: Number(raw.views) || 0,
     enquiries: 0,
-    createdAt: s.createdAt,
+    createdAt: raw.createdAt ?? new Date(0).toISOString(),
   };
 }
 
-/** GET /listings/approved — all approved listings from the real backend. Throws on network/server error. */
+/** GET /listings/approved: every public listing, admin-created and approved submissions alike. Throws on network/server error. */
 export async function getApprovedListings(): Promise<Listing[]> {
   const response = await fetch(`${BASE}/listings/approved`, {
     cache: "no-store",
@@ -103,10 +158,7 @@ export async function getApprovedListings(): Promise<Listing[]> {
   });
 
   if (!response.ok) throw new Error(`Server error ${response.status}`);
-  const body = await response.json();
-  // A listing with a closing record is a closed deal; it stays in the admin dashboard.
-  const listings = ((body.listings ?? []) as Array<ListingSubmission & { listing: { closing?: unknown } }>)
-    .filter((submission) => !submission.listing.closing)
-    .map(submissionToListing);
+  const body = (await response.json()) as { listings?: ServerListing[] };
+  const listings = (body.listings ?? []).map(toPublicListing).filter((listing): listing is Listing => listing !== null);
   return SHOW_SAMPLE_LISTING ? [...listings, structuredClone(sampleSaleListing)] : listings;
 }

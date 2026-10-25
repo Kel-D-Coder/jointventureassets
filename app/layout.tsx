@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Manrope } from "next/font/google";
+import { Cormorant_Garamond, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import NavbarWrapper from "@/components/layout/NavbarWrapper";
 import FooterWrapper from "@/components/layout/FooterWrapper";
@@ -8,17 +8,19 @@ import { SessionWatcher } from "@/components/auth/SessionWatcher";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import CookieConsentBanner from "@/components/layout/CookieConsentBanner";
 
-const manrope = Manrope({
+/** Body, forms, buttons and numbers. */
+const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-manrope',
+  variable: '--font-jakarta',
   display: 'swap'
 });
 
-const fraunces = Fraunces({
+/** Headings only (24px and up): it gets too delicate for small text. */
+const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
-  weight: ['500', '600'],
-  variable: '--font-fraunces',
+  weight: ['500', '600', '700'],
+  variable: '--font-cormorant',
   display: 'swap'
 });
 
@@ -32,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${jakarta.variable} ${cormorant.variable}`}>
       <head>
         <script
           type="application/ld+json"
@@ -52,7 +54,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${manrope.variable} ${fraunces.variable} antialiased`}
+        className="antialiased"
       >
         <StoreProvider>
           <SessionWatcher />

@@ -2,7 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getApprovedListings } from "@/lib/api/listings";
-import { FiArrowLeft, FiCheck, FiCheckCircle, FiMapPin, FiStar } from "react-icons/fi";
+import { FiArrowLeft, FiCheck, FiCheckCircle, FiMapPin, FiStar, FiUser } from "react-icons/fi";
+import { PanelDecor } from "@/components/ui/PanelDecor";
+import { Panel } from "@/components/ui/Panel";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { getListing } from "@/lib/api/listings";
 import { EnquiryForm } from "@/components/enquiries/EnquiryForm";
 import { ListingGallery } from "@/components/listings/ListingGallery";
@@ -11,6 +14,7 @@ import { propertyTypeLabel } from "@/components/listings/labels";
 import { formatNaira, formatSize, premiumText } from "@/lib/format";
 import { isSampleListing } from "@/lib/data/sampleListing";
 import type { Listing } from "@/types";
+import { coverOf, joinMedia } from "@/lib/videoWatermark";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -26,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${listing.title}, ${listing.area}, ${listing.city} | Joint Venture Assets`,
     description: listing.description,
-    openGraph: { images: [{ url: listing.images[0]! }] },
+    openGraph: { images: [{ url: coverOf(listing.images) ?? listing.images[0]! }] },
   };
 }
 
@@ -49,12 +53,13 @@ export default async function ListingDetailPage({ params }: Props) {
   return (
     <main className="bg-white pb-24">
       <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
-        <Link href="/listings" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
-          <FiArrowLeft aria-hidden="true" /> All listings
+        <Link href="/listings" className="group inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-ink">
+          <FiArrowLeft aria-hidden="true" className="transition-transform group-hover:-translate-x-0.5" /> All listings
         </Link>
 
-        <section className="mt-6 rounded-2xl border border-line bg-white p-5 shadow-[0_10px_30px_-24px_rgb(14_17_22/0.35)] sm:p-7">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <section className="relative mt-5 overflow-hidden rounded-3xl bg-ink p-6 text-white shadow-[0_24px_60px_-30px_rgb(14_17_22/0.6)] sm:p-9">
+          <PanelDecor />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0 max-w-3xl">
               <div className="flex flex-wrap items-center gap-2">
                 {listing.featured ? (
@@ -68,25 +73,25 @@ export default async function ListingDetailPage({ params }: Props) {
                   </span>
                 ) : null}
                 {listing.status === "under_offer" ? (
-                  <span className="rounded-full bg-ivory px-3 py-1 text-xs font-bold text-ink">Under offer</span>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white ring-1 ring-white/15">Under offer</span>
                 ) : null}
               </div>
 
-              <p className="mt-4 text-sm font-semibold text-gold-deep">{kindLine(listing)}</p>
-              <h1 className="mt-1.5 text-3xl leading-tight font-bold tracking-tight text-ink sm:text-4xl">{listing.title}</h1>
-              <p className="mt-3 flex items-center gap-2 text-muted">
-                <FiMapPin aria-hidden="true" className="shrink-0" /> {listing.area}, {listing.city}, {listing.state}
+              <p className="mt-5 text-xs font-bold tracking-[0.18em] text-gold uppercase">{kindLine(listing)}</p>
+              <h1 className="mt-2 font-display text-4xl leading-tight text-white sm:text-5xl">{listing.title}</h1>
+              <p className="mt-3 flex items-center gap-2 text-white/65">
+                <FiMapPin aria-hidden="true" className="shrink-0 text-gold" /> {listing.area}, {listing.city}, {listing.state}
               </p>
             </div>
 
-            <div className="shrink-0 lg:text-right">
-              <p className="text-3xl font-bold tracking-tight text-ink tabular-nums sm:text-4xl">{formatNaira(listing.price)}</p>
-              <p className="mt-1 text-sm text-muted">{listing.dealType === "jv" ? "Land value" : "Asking price"}</p>
+            <div className="shrink-0 lg:border-l lg:border-white/10 lg:pl-8 lg:text-right">
+              <p className="text-xs font-semibold tracking-wide text-white/55 uppercase">{listing.dealType === "jv" ? "Land value" : "Asking price"}</p>
+              <p className="mt-1 font-display text-4xl leading-none text-white sm:text-5xl">{formatNaira(listing.price)}</p>
               {listing.jv ? (
-                <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-ivory px-3 py-1.5 text-sm font-semibold text-ink">
+                <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold/15 px-3 py-1.5 text-sm font-semibold text-gold-soft ring-1 ring-gold/30">
                   {listing.jv.sharingFormula} sharing
                   {listing.jv.sharingNegotiable !== undefined ? (
-                    <span className="font-medium text-muted">· {listing.jv.sharingNegotiable ? "Negotiable" : "Fixed"}</span>
+                    <span className="font-medium text-white/60">· {listing.jv.sharingNegotiable ? "Negotiable" : "Fixed"}</span>
                   ) : null}
                 </p>
               ) : null}
@@ -95,24 +100,29 @@ export default async function ListingDetailPage({ params }: Props) {
         </section>
 
         <div className="mt-8">
-          <ListingGallery images={listing.images} title={listing.title} />
+          <ListingGallery images={joinMedia(listing.images, listing.videos)} title={listing.title} />
         </div>
 
         <div className="mt-12 grid gap-12 lg:grid-cols-[1fr_24rem]">
           <div className="space-y-12">
-            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-4">
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {facts.map((fact) => (
-                <div key={fact.label} className="bg-white p-5">
-                  <dt className="eyebrow text-muted">{fact.label}</dt>
-                  <dd className="mt-2 font-semibold text-ink">{fact.value}</dd>
+                <div
+                  key={fact.label}
+                  className="relative overflow-hidden rounded-2xl border border-line bg-white p-5 shadow-[0_1px_2px_rgb(14_17_22/0.04)]"
+                >
+                  <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-transparent via-gold/50 to-transparent" />
+                  <dt className="text-xs font-semibold tracking-wide text-muted uppercase">{fact.label}</dt>
+                  <dd className="mt-2 font-display text-xl text-ink">{fact.value}</dd>
                 </div>
               ))}
             </dl>
 
             {listing.jv ? (
-              <section className="rounded-2xl bg-ink p-6 text-white sm:p-8">
-                <p className="eyebrow text-gold">Joint-venture terms</p>
-                <dl className="mt-5 grid gap-6 sm:grid-cols-2">
+              <section className="relative overflow-hidden rounded-3xl bg-ink p-6 text-white shadow-[0_24px_60px_-30px_rgb(14_17_22/0.6)] sm:p-8">
+                <PanelDecor glow="bottom-left" />
+                <p className="relative text-xs font-bold tracking-[0.18em] text-gold uppercase">Joint-venture terms</p>
+                <dl className="relative mt-5 grid gap-6 sm:grid-cols-2">
                   <div>
                     <dt className="text-sm text-gray-400">Sharing formula</dt>
                     <dd className="mt-1 flex flex-wrap items-center gap-3">
@@ -144,9 +154,8 @@ export default async function ListingDetailPage({ params }: Props) {
               </section>
             ) : null}
 
-            <section>
-              <h2 className="font-display text-2xl text-ink">About this {listing.dealType === "jv" ? "opportunity" : "property"}</h2>
-              <p className="mt-4 leading-relaxed text-gray-700">{listing.description}</p>
+            <Panel title={`About this ${listing.dealType === "jv" ? "opportunity" : "property"}`}>
+              <p className="leading-relaxed text-gray-700">{listing.description}</p>
               {listing.highlights.length ? (
                 <ul className="mt-6 grid gap-3 sm:grid-cols-2">
                   {listing.highlights.map((highlight) => (
@@ -159,20 +168,26 @@ export default async function ListingDetailPage({ params }: Props) {
                   ))}
                 </ul>
               ) : null}
-            </section>
+            </Panel>
 
-            <section className="rounded-2xl border border-line bg-ivory p-6">
-              <h2 className="font-bold text-ink">Listed by {listing.ownerName}</h2>
-              <p className="mt-1 text-sm text-muted">
-                Contact details are shared once JVA has introduced you. All negotiations are managed through our team.
-              </p>
+            <section className="flex items-start gap-4 rounded-3xl border border-line bg-linear-to-r from-ivory to-white p-6">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-ink text-gold ring-1 ring-gold/25">
+                <FiUser aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="font-display text-xl text-ink">Listed by {listing.ownerName}</h2>
+                <p className="mt-1 text-sm text-muted">
+                  Contact details are shared once JVA has introduced you. All negotiations are managed through our team.
+                </p>
+              </div>
             </section>
           </div>
 
           <aside>
-            <div className="rounded-2xl border border-line p-6 shadow-[0_18px_40px_-24px_rgb(14_17_22/0.35)] lg:sticky lg:top-24">
+            <div className="relative overflow-hidden rounded-3xl border border-line bg-white p-6 shadow-[0_24px_48px_-28px_rgb(14_17_22/0.4)] lg:sticky lg:top-24">
+              <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-gold-deep via-gold to-gold-deep" />
               <EnquiryForm
-                target={{ type: "listing", id: listing.id, title: listing.title, subtitle: `${listing.area}, ${listing.city}`, image: listing.images[0] }}
+                target={{ type: "listing", id: listing.id, title: listing.title, subtitle: `${listing.area}, ${listing.city}`, image: coverOf(listing.images) }}
                 eyebrow={listing.dealType === "jv" ? "Joint venture enquiry" : "Purchase enquiry"}
                 jointVenture={listing.dealType === "jv"}
                 salePrice={listing.dealType === "sale" ? listing.price : undefined}
@@ -190,9 +205,10 @@ export default async function ListingDetailPage({ params }: Props) {
 
         {similar.length ? (
           <section className="mt-20">
-            <h2 className="font-display text-3xl text-ink">
-              More {listing.dealType === "jv" ? "joint-venture opportunities" : "properties for sale"}
-            </h2>
+            <SectionHeading
+              eyebrow="You might also like"
+              title={`More ${listing.dealType === "jv" ? "joint-venture opportunities" : "properties for sale"}`}
+            />
             <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {similar.map((other) => (
                 <li key={other.id}>

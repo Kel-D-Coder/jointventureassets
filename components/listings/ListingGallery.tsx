@@ -2,16 +2,23 @@
 
 import Image from "next/image";
 import { useRef, useState, type KeyboardEvent, type TouchEvent } from "react";
-import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiPlay } from "react-icons/fi";
 import { cx } from "@/lib/format";
+import { isVideoUrl } from "@/lib/videoWatermark";
 
-/** Swipeable photo slider for a listing: arrows, thumbnails, keyboard and touch. */
+/** Swipeable photo slider for a listing (and its video, if it has one): arrows, thumbnails, keyboard and touch. */
 export function ListingGallery({ images, title }: { images: string[]; title: string }) {
   const [index, setIndex] = useState(0);
   const touchStart = useRef<number | null>(null);
+  const slider = useRef<HTMLDivElement>(null);
   const count = images.length;
 
-  const go = (next: number) => setIndex((next + count) % count);
+  /** Moving to another slide pauses the video. */
+  const show = (next: number) => {
+    slider.current?.querySelectorAll("video").forEach((video) => video.pause());
+    setIndex(next);
+  };
+  const go = (next: number) => show((next + count) % count);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "ArrowLeft") go(index - 1);
@@ -41,7 +48,7 @@ export function ListingGallery({ images, title }: { images: string[]; title: str
         onTouchEnd={onTouchEnd}
         className="group relative aspect-[16/9] overflow-hidden rounded-3xl bg-ivory focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
       >
-        <div className="flex h-full transition-transform duration-500 ease-out" style={{ transform: `translateX(-${index * 100}%)` }}>
+        <div ref={slider} className="flex h-full transition-transform duration-500 ease-out" style={{ transform: `translateX(-${index * 100}%)` }}>
           {images.map((src, slide) => (
             <div
               key={src + slide}
@@ -51,14 +58,18 @@ export function ListingGallery({ images, title }: { images: string[]; title: str
               aria-label={`${slide + 1} of ${count}`}
               aria-hidden={slide !== index}
             >
-              <Image
-                src={src}
-                alt={slide === 0 ? title : `${title}, photo ${slide + 1}`}
-                fill
-                priority={slide === 0}
-                sizes="(min-width: 1280px) 1216px, 100vw"
-                className="object-cover"
-              />
+              {isVideoUrl(src) ? (
+                <video src={src} controls playsInline preload="metadata" aria-label={`Video of ${title}`} className="h-full w-full bg-ink object-contain" />
+              ) : (
+                <Image
+                  src={src}
+                  alt={slide === 0 ? title : `${title}, photo ${slide + 1}`}
+                  fill
+                  priority={slide === 0}
+                  sizes="(min-width: 1280px) 1216px, 100vw"
+                  className="object-cover"
+                />
+              )}
             </div>
           ))}
         </div>
@@ -94,15 +105,21 @@ export function ListingGallery({ images, title }: { images: string[]; title: str
             <button
               key={src + slide}
               type="button"
-              onClick={() => setIndex(slide)}
-              aria-label={`Show photo ${slide + 1}`}
+              onClick={() => show(slide)}
+              aria-label={isVideoUrl(src) ? "Show the video" : `Show photo ${slide + 1}`}
               aria-current={slide === index}
               className={cx(
                 "relative h-16 w-24 shrink-0 overflow-hidden rounded-xl border-2 transition sm:h-20 sm:w-32",
                 slide === index ? "border-gold" : "border-transparent opacity-60 hover:opacity-100",
               )}
             >
-              <Image src={src} alt="" fill sizes="128px" className="object-cover" />
+              {isVideoUrl(src) ? (
+                <span className="grid h-full w-full place-items-center bg-ink text-gold">
+                  <FiPlay aria-hidden="true" className="h-5 w-5" />
+                </span>
+              ) : (
+                <Image src={src} alt="" fill sizes="128px" className="object-cover" />
+              )}
             </button>
           ))}
         </div>

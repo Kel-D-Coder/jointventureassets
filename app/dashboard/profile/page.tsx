@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { FiArrowLeft, FiCheckCircle, FiClock, FiSlash } from "react-icons/fi";
+import { FiCheckCircle, FiClock, FiMail, FiSlash } from "react-icons/fi";
 import { useAppSelector } from "@/hooks/hooks";
 import { getMyAccount, updateProfile } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/errors";
@@ -12,17 +11,32 @@ import { InvestorDocuments } from "@/components/auth/InvestorDocuments";
 import { BuyerDocuments } from "@/components/auth/BuyerDocuments";
 import { Alert, Field, SubmitButton, inputClass } from "@/components/ui/form";
 import { cx } from "@/lib/format";
+import { HeroChip, HeroPanel } from "@/components/ui/HeroPanel";
+import { Panel } from "@/components/ui/Panel";
 import type { AccountStatus, MemberAccount, ProfileDocuments } from "@/lib/inbox/types";
 
-const statusInfo: Record<AccountStatus, { label: string; note: string; className: string; icon: typeof FiClock }> = {
+const statusInfo: Record<AccountStatus, { label: string; note: string; className: string; chip: string; icon: typeof FiClock }> = {
   pending: {
     label: "Awaiting approval",
     note: "Our team reviews new profiles, usually within 48 hours. You can use the site in the meantime.",
-    className: "border-amber-200 bg-amber-50 text-amber-900",
+    className: "border-gold/40 bg-linear-to-r from-gold-soft/60 via-gold-soft/25 to-white text-ink",
+    chip: "bg-gold/15 text-gold-soft ring-gold/40",
     icon: FiClock,
   },
-  active: { label: "Approved", note: "Your account is approved.", className: "border-green-200 bg-green-50 text-green-900", icon: FiCheckCircle },
-  suspended: { label: "Suspended", note: "Please contact info@jointventureassets.com.", className: "border-red-200 bg-red-50 text-red-900", icon: FiSlash },
+  active: {
+    label: "Approved",
+    note: "Your account is approved.",
+    className: "border-green-200 bg-green-50/70 text-green-900",
+    chip: "bg-emerald-400/15 text-emerald-200 ring-emerald-300/30",
+    icon: FiCheckCircle,
+  },
+  suspended: {
+    label: "Suspended",
+    note: "Please contact info@jointventureassets.com.",
+    className: "border-red-200 bg-red-50/70 text-red-900",
+    chip: "bg-red-400/15 text-red-200 ring-red-300/30",
+    icon: FiSlash,
+  },
 };
 
 export default function ProfilePage() {
@@ -90,42 +104,62 @@ export default function ProfilePage() {
   const status = account ? statusInfo[account.status] : null;
 
   return (
-    <main className="bg-ivory px-4 py-12 sm:px-6">
-      <div className="mx-auto max-w-3xl">
-        <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
-          <FiArrowLeft aria-hidden="true" /> My dashboard
-        </Link>
+    <main className="bg-white pb-24">
+      <HeroPanel
+        width="max-w-4xl"
+        back={{ label: "My dashboard", href: "/dashboard" }}
+        eyebrow={account ? `${account.role} · ${account.category}` : "My account"}
+        title="My profile"
+        intro="Keep your details up to date. Our team uses them to review your account and match you with the right partners."
+        meta={
+          account ? (
+            <>
+              {status ? (
+                <span className={cx("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 ring-1", status.chip)}>
+                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
+                  {status.label}
+                </span>
+              ) : null}
+              <HeroChip>
+                <FiMail aria-hidden="true" /> {account.email}
+              </HeroChip>
+            </>
+          ) : null
+        }
+      />
 
-        <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="eyebrow text-gold-deep">{account ? `${account.role} · ${account.category}` : "My profile"}</p>
-            <h1 className="mt-2 font-display text-4xl text-ink">My profile</h1>
-          </div>
-        </div>
+      <div className="mx-auto max-w-4xl px-4 pt-8 sm:px-6 lg:px-8">
+        {loadError ? <Alert tone="error">{loadError}</Alert> : null}
 
-        {loadError ? <Alert tone="error" className="mt-6">{loadError}</Alert> : null}
-
-        {status ? (
-          <div className={cx("mt-6 flex gap-3 rounded-2xl border p-4 text-sm", status.className)}>
-            <status.icon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>
-              <strong>{status.label}.</strong> {status.note}
+        {status && account?.status !== "active" ? (
+          <div className={cx("relative flex items-start gap-4 overflow-hidden rounded-2xl border p-5", status.className)}>
+            <span aria-hidden="true" className={cx("absolute inset-y-0 left-0 w-1", account?.status === "suspended" ? "bg-red-400" : "bg-gold")} />
+            <span
+              className={cx(
+                "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
+                account?.status === "suspended" ? "bg-red-100 text-red-700" : "bg-ink text-gold",
+              )}
+            >
+              <status.icon aria-hidden="true" />
+            </span>
+            <p className="text-sm">
+              <strong className="block font-semibold">{status.label}</strong>
+              <span className="text-muted">{status.note}</span>
             </p>
           </div>
         ) : null}
 
         {loading ? (
-          <div className="mt-6 space-y-4" aria-busy="true">
-            <div className="h-12 animate-pulse rounded-2xl bg-white" />
-            <div className="h-96 animate-pulse rounded-3xl bg-white" />
+          <div className="mt-6 space-y-6" aria-busy="true">
+            <div className="h-64 animate-pulse rounded-3xl border border-line bg-ivory/70" />
+            <div className="h-96 animate-pulse rounded-3xl border border-line bg-ivory/70" />
           </div>
         ) : !account && !loadError ? (
-          <div className="mt-6 h-96 animate-pulse rounded-3xl bg-white" aria-busy="true" />
+          <div className="mt-6 h-96 animate-pulse rounded-3xl border border-line bg-ivory/70" aria-busy="true" />
         ) : account ? (
           <form onSubmit={save} className="mt-6 space-y-6">
-            <section className="rounded-3xl border border-line bg-white p-6 sm:p-8">
-              <h2 className="font-display text-2xl text-ink">Account</h2>
-              <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            <Panel title="Account" subtitle="How our team reaches you.">
+              <div className="grid gap-5 sm:grid-cols-2">
                 <Field label={account.category !== "Individual" ? "Contact person's full name" : "Full name"} htmlFor="fullName" required>
                   <input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} className={inputClass} required />
                 </Field>
@@ -136,23 +170,25 @@ export default function ProfilePage() {
                   <input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className={inputClass} required />
                 </Field>
               </div>
-            </section>
+            </Panel>
 
-            <section className="rounded-3xl border border-line bg-white p-6 sm:p-8">
-              <h2 className="font-display text-2xl text-ink">{account.role} details</h2>
-              <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            <Panel title={`${account.role} details`} subtitle="What you're looking for, so we can match you well.">
+              <div className="grid gap-5 sm:grid-cols-2">
                 <ProfileFields fields={fields} values={profile} onChange={(name, value) => setProfile((current) => ({ ...current, [name]: value }))} />
                 {isInvestor ? <InvestorDocuments value={documents} onChange={setDocuments} token={token ?? undefined} /> : null}
                 {isBuyer ? <BuyerDocuments value={documents} onChange={setDocuments} token={token ?? undefined} /> : null}
               </div>
-            </section>
+            </Panel>
 
             {notice ? <Alert tone={notice.tone}>{notice.text}</Alert> : null}
 
-            <div className="sm:w-60">
-              <SubmitButton loading={saving} loadingText="Saving…">
-                Save profile
-              </SubmitButton>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="w-full sm:w-60">
+                <SubmitButton loading={saving} loadingText="Saving…">
+                  Save profile
+                </SubmitButton>
+              </div>
+              <p className="text-sm text-muted">Changes reach our team straight away.</p>
             </div>
           </form>
         ) : null}

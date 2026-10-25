@@ -6,6 +6,8 @@ import { FiArrowRight, FiCheckCircle, FiFileText, FiUploadCloud, FiX } from "rea
 import { createRequest } from "@/lib/api/requests";
 import { errorMessage } from "@/lib/api/errors";
 import { useAppSelector } from "@/hooks/hooks";
+import { useMyAccount } from "@/hooks/useMyAccount";
+import { AccountNotApproved } from "@/components/auth/AccountNotApproved";
 import { PageHero } from "@/components/ui/PageHero";
 import { Alert, Field, SubmitButton, inputClass } from "@/components/ui/form";
 import { RequestBriefFields } from "@/components/requests/RequestBriefFields";
@@ -17,6 +19,8 @@ const MAX_FILE_MB = 10;
 
 export default function SubmitRequestPage() {
   const { user, token, isAuthenticated } = useAppSelector((state) => state.auth);
+  // Only approved members can post a request.
+  const { account, loading: checkingAccount, error: accountError, approved, reload: recheckAccount } = useMyAccount();
   const [type, setType] = useState<RequestType>("jv");
   const [brief, setBrief] = useState<Brief>(emptyBrief);
   const [notes, setNotes] = useState("");
@@ -47,6 +51,10 @@ export default function SubmitRequestPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!approved) {
+      setError("Your account needs to be approved before you can post a request.");
+      return;
+    }
     const problem = briefProblem(type, brief);
     if (problem) {
       setError(problem);
@@ -96,6 +104,7 @@ export default function SubmitRequestPage() {
   return (
     <main className="bg-white pb-24">
       <PageHero
+        tone="dark"
         eyebrow="Post a request"
         title="Tell us what you want, we'll find it"
         intro="Didn't see it in our listings? Describe what you're looking for and your budget. Our team sources it for you, and once your request is approved, members on the platform can respond."
@@ -114,6 +123,24 @@ export default function SubmitRequestPage() {
                 Create an account
               </Link>
             </div>
+          </div>
+        ) : checkingAccount ? (
+          <div className="lg:col-span-2">
+            <div className="space-y-4" aria-busy="true" aria-label="Checking your account">
+              <div className="h-24 animate-pulse rounded-2xl bg-ivory" />
+              <div className="h-64 animate-pulse rounded-2xl bg-ivory" />
+            </div>
+          </div>
+        ) : accountError ? (
+          <div className="rounded-2xl border border-line bg-ivory p-8 text-center lg:col-span-2">
+            <Alert tone="error">{accountError}</Alert>
+            <button type="button" onClick={recheckAccount} className="mt-4 rounded-full bg-ink px-6 py-3 text-sm font-bold text-white hover:bg-ink/85">
+              Try again
+            </button>
+          </div>
+        ) : account && !approved ? (
+          <div className="lg:col-span-2">
+            <AccountNotApproved account={account} action="post a request" />
           </div>
         ) : (
           <form onSubmit={handleSubmit} noValidate className="space-y-8">
@@ -222,7 +249,7 @@ export default function SubmitRequestPage() {
           </form>
         )}
 
-        {isAuthenticated ? (
+        {isAuthenticated && approved ? (
           <aside className="self-start rounded-2xl bg-ink p-7 text-white lg:sticky lg:top-28">
             <p className="eyebrow text-gold">What happens next</p>
             <ol className="mt-5 space-y-5 text-sm">

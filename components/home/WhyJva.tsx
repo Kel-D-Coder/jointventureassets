@@ -12,13 +12,14 @@ const reasons = [
 
 export function WhyJva() {
   return (
-    <section className="bg-ivory py-20 sm:py-24">
+    <section className="bg-linear-to-b from-white via-ivory to-ivory py-20 sm:py-24">
       <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
-        <div className="relative order-last aspect-[4/5] overflow-hidden rounded-3xl lg:order-first">
+        <div className="relative order-last aspect-[4/5] overflow-hidden rounded-3xl shadow-[0_30px_60px_-30px_rgb(14_17_22/0.5)] lg:order-first">
           <Image src={buildingImage} alt="A modern residential block photographed from below" fill sizes="(min-width: 1024px) 50vw, 100vw" className="object-cover" />
-          <div className="absolute right-5 bottom-5 left-5 rounded-2xl bg-white/95 p-5 shadow-lg backdrop-blur sm:right-auto sm:max-w-xs">
-            <p className="font-display text-3xl text-ink">48 hrs</p>
-            <p className="mt-1 text-sm text-muted">Our target for reviewing every new request.</p>
+          <div className="absolute right-5 bottom-5 left-5 overflow-hidden rounded-2xl bg-ink/90 p-5 text-white shadow-lg ring-1 ring-gold/30 backdrop-blur sm:right-auto sm:max-w-xs">
+            <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-gold" />
+            <p className="font-display text-4xl leading-none text-gold">48 hrs</p>
+            <p className="mt-2 text-sm text-white/70">Our target for reviewing every new request.</p>
           </div>
         </div>
         <div>
@@ -29,11 +30,11 @@ export function WhyJva() {
           />
           <ul className="mt-10 grid gap-6 sm:grid-cols-2">
             {reasons.map(({ icon: Icon, title, body }) => (
-              <li key={title}>
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-ink text-gold">
+              <li key={title} className="rounded-2xl border border-line bg-white p-5 shadow-[0_1px_2px_rgb(14_17_22/0.04)] transition hover:border-gold/40">
+                <span className="grid h-11 w-11 place-items-center rounded-xl bg-ink text-gold ring-1 ring-gold/25">
                   <Icon aria-hidden="true" />
                 </span>
-                <h3 className="mt-4 font-bold text-ink">{title}</h3>
+                <h3 className="mt-4 font-display text-xl text-ink">{title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted">{body}</p>
               </li>
             ))}

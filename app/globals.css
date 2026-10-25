@@ -17,8 +17,18 @@
   --color-line: #e6e1d6;
   --color-muted: #5b6270;
 
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-fraunces), Georgia, ui-serif, serif;
+  /* Plus Jakarta Sans for reading and UI; Cormorant Garamond for headings. */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-cormorant), Georgia, ui-serif, serif;
+}
+
+/* Cormorant reads best a little heavier, and with figures that sit on the line (₦40M, 2,400 sqm).
+   In the base layer, so a heading can still ask for another weight with font-medium, font-bold and so on. */
+@layer base {
+  .font-display {
+    font-weight: 600;
+    font-variant-numeric: lining-nums;
+  }
 }
 
 :root {

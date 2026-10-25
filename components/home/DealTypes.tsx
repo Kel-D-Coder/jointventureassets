@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FiArrowRight, FiCheck } from "react-icons/fi";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { PanelDecor } from "@/components/ui/PanelDecor";
 
 const deals = [
   {
@@ -39,16 +40,21 @@ export function DealTypes() {
               href={deal.href}
               className={
                 deal.dark
-                  ? "group flex flex-col rounded-3xl bg-ink p-8 text-white transition-transform hover:-translate-y-1 sm:p-10"
-                  : "group flex flex-col rounded-3xl border border-line bg-ivory p-8 text-ink transition-transform hover:-translate-y-1 sm:p-10"
+                  ? "group relative flex flex-col overflow-hidden rounded-3xl bg-ink p-8 text-white shadow-[0_24px_60px_-30px_rgb(14_17_22/0.6)] transition duration-300 hover:-translate-y-1 sm:p-10"
+                  : "group relative flex flex-col overflow-hidden rounded-3xl border border-line bg-white p-8 text-ink shadow-[0_1px_2px_rgb(14_17_22/0.04),0_24px_48px_-36px_rgb(14_17_22/0.3)] transition duration-300 hover:-translate-y-1 hover:border-gold/40 sm:p-10"
               }
             >
-              <span className={deal.dark ? "w-fit rounded-full bg-gold px-3 py-1 text-xs font-bold text-ink" : "w-fit rounded-full bg-ink px-3 py-1 text-xs font-bold text-white"}>
+              {deal.dark ? (
+                <PanelDecor />
+              ) : (
+                <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-transparent via-gold/60 to-transparent" />
+              )}
+              <span className={deal.dark ? "relative w-fit rounded-full bg-gold px-3 py-1 text-xs font-bold text-ink" : "relative w-fit rounded-full bg-ink px-3 py-1 text-xs font-bold text-gold"}>
                 {deal.tag}
               </span>
-              <h3 className="mt-6 font-display text-2xl leading-snug sm:text-3xl">{deal.title}</h3>
-              <p className={deal.dark ? "mt-4 text-gray-300" : "mt-4 text-muted"}>{deal.body}</p>
-              <ul className="mt-6 space-y-2.5">
+              <h3 className="relative mt-6 font-display text-3xl leading-snug sm:text-[2rem]">{deal.title}</h3>
+              <p className={deal.dark ? "relative mt-4 text-white/65" : "relative mt-4 text-muted"}>{deal.body}</p>
+              <ul className="relative mt-6 space-y-2.5">
                 {deal.points.map((point) => (
                   <li key={point} className="flex items-center gap-3 text-sm font-medium">
                     <span className={deal.dark ? "grid h-5 w-5 place-items-center rounded-full bg-gold/20 text-gold" : "grid h-5 w-5 place-items-center rounded-full bg-gold-soft text-gold-deep"}>
@@ -58,7 +64,7 @@ export function DealTypes() {
                   </li>
                 ))}
               </ul>
-              <span className={deal.dark ? "mt-8 inline-flex items-center gap-2 font-semibold text-gold" : "mt-8 inline-flex items-center gap-2 font-semibold text-gold-deep"}>
+              <span className={deal.dark ? "relative mt-8 inline-flex items-center gap-2 font-semibold text-gold" : "relative mt-8 inline-flex items-center gap-2 font-semibold text-gold-deep"}>
                 {deal.cta} <FiArrowRight aria-hidden="true" className="transition-transform group-hover:translate-x-1" />
               </span>
             </Link>

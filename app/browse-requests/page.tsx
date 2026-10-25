@@ -39,6 +39,7 @@ export default function BrowseRequests() {
   return (
     <main className="bg-white pb-24">
       <PageHero
+        tone="dark"
         eyebrow="Requests"
         title="What other members are looking for"
         intro="When members can't find what they want in our listings, they post a request. Have what someone is looking for? Send an enquiry and we'll make the introduction."

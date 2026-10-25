@@ -20,6 +20,8 @@ export interface Listing {
   description: string;
   highlights: string[];
   images: string[];
+  /** The listing's video, if it has one (at most one), watermarked like the photos. */
+  videos?: string[];
   jv?: {
     /** Landowner / developer split, e.g. "40/60". */
     sharingFormula: string;

@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { FiArrowRight, FiCheckCircle, FiFileText, FiSave, FiStar, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
+import { FiArrowRight, FiCheckCircle, FiFileText, FiSave, FiStar, FiTrash2, FiUploadCloud, FiVideo, FiX } from "react-icons/fi";
 import { useAppSelector } from "@/hooks/hooks";
+import { useMyAccount } from "@/hooks/useMyAccount";
+import { AccountNotApproved } from "@/components/auth/AccountNotApproved";
 import { deleteSubmission, getSubmission, saveSubmission, type SubmissionInput } from "@/lib/api/inbox";
 import { errorMessage } from "@/lib/api/errors";
 import { resizeImage } from "@/lib/image";
+import { VIDEO_LIMITS, discardVideo, isVideoUrl, joinMedia, photosThenVideo, prepareVideo, splitMedia } from "@/lib/videoWatermark";
 import { MAX_DOCUMENT_MB, fileSize, toDocument } from "@/lib/files";
 import { cx, formatNaira } from "@/lib/format";
 import { SALE_FEE_RATE, saleFee } from "@/lib/fees";
@@ -65,7 +68,7 @@ function validate(form: FormState, images: string[], documents: SubmittedDocumen
   if (!form.area.trim()) errors.area = "Add the area.";
   if (!form.city.trim()) errors.city = "Add the city.";
   if (!form.description.trim()) errors.description = "Describe the property.";
-  if (!images.length) errors.images = "Add at least one photo.";
+  if (!images.some((url) => !isVideoUrl(url))) errors.images = "Add at least one photo.";
   if (!documents.length) errors.documents = "Upload at least one title document so we can verify ownership.";
   if (!form.isOwner && !form.ownerName.trim()) errors.ownerName = "Who owns the property?";
   if (!form.fullName.trim()) errors.fullName = "Enter your name.";
@@ -109,6 +112,8 @@ const timeFormat = new Intl.DateTimeFormat("en-NG", { hour: "numeric", minute: "
 
 export function SubmitListingForm() {
   const { user, token } = useAppSelector((state) => state.auth);
+  // Only approved members can list a property.
+  const { account, loading: checkingAccount, error: accountError, approved, reload: recheckAccount } = useMyAccount();
   const router = useRouter();
   const pathname = usePathname();
   const draftParam = useSearchParams().get("draft");
@@ -123,6 +128,8 @@ export function SubmitListingForm() {
   const [error, setError] = useState("");
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [busy, setBusy] = useState<"draft" | "submit" | "delete" | "files" | null>(null);
+  /** 0–1 while the video is being watermarked. */
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
   const [dragging, setDragging] = useState<"photos" | "documents" | null>(null);
   const [submitted, setSubmitted] = useState<ListingSubmission | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
@@ -138,7 +145,7 @@ export function SubmitListingForm() {
           return;
         }
         setForm(formFromSubmission(submission));
-        setImages(submission.listing.images);
+        setImages(joinMedia(submission.listing.images, submission.listing.videos));
         setDocuments(submission.documents ?? []);
         setSavedAt(new Date(submission.updatedAt));
       })
@@ -153,20 +160,43 @@ export function SubmitListingForm() {
   const onText = (key: keyof FormState) => (event: { target: { value: string } }) => set(key, event.target.value as never);
   const digits = (key: "sizeSqm") => (event: { target: { value: string } }) => set(key, event.target.value.replace(/[^\d]/g, ""));
 
+  /** Photos (up to MAX_PHOTOS) and at most one video; everything is watermarked as it's added. */
   const addPhotos = async (files: FileList | null) => {
     if (!files?.length) return;
     setBusy("files");
-    const room = MAX_PHOTOS - images.length;
+    const chosen = Array.from(files);
+    const photos = chosen.filter((file) => !file.type.startsWith("video/"));
+    const videos = chosen.filter((file) => file.type.startsWith("video/"));
+    const hasVideo = images.some(isVideoUrl);
+    const room = MAX_PHOTOS - images.filter((url) => !isVideoUrl(url)).length;
+    const problems: string[] = [];
     const added: string[] = [];
-    for (const file of Array.from(files).slice(0, room)) {
+    for (const file of photos.slice(0, Math.max(0, room))) {
       try {
         added.push(await resizeImage(file));
       } catch (caught) {
-        setError((caught as Error).message);
+        problems.push((caught as Error).message);
       }
     }
-    if (files.length > room) setError(`You can add up to ${MAX_PHOTOS} photos.`);
-    setImages((current) => [...current, ...added]);
+    if (photos.length > room) problems.push(`You can add up to ${MAX_PHOTOS} photos.`);
+    setImages((current) => photosThenVideo([...current, ...added]));
+
+    if (videos.length && (hasVideo || videos.length > 1)) {
+      problems.push(hasVideo ? "You can add one video. Remove the current video to add a different one." : "You can add one video. Choose just one.");
+    }
+    if (videos.length && !hasVideo) {
+      setVideoProgress(0);
+      try {
+        const video = await prepareVideo(videos[0]!, setVideoProgress);
+        setImages((current) => photosThenVideo([...current, video]));
+      } catch (caught) {
+        problems.push((caught as Error).message);
+      } finally {
+        setVideoProgress(null);
+      }
+    }
+
+    if (problems.length) setError(problems.join(" "));
     setBusy(null);
     if (photoInput.current) photoInput.current.value = "";
   };
@@ -220,7 +250,7 @@ export function SubmitListingForm() {
       titleDocument: form.titleDocument,
       description: form.description.trim(),
       highlights: form.highlights.split("\n").map((line) => line.trim()).filter(Boolean),
-      images,
+      ...splitMedia(images),
       jv:
         form.dealType === "jv"
           ? {
@@ -244,6 +274,7 @@ export function SubmitListingForm() {
       return;
     }
     if (!token) { setError("Log in to save a draft."); return; }
+    if (!approved) { setError("Your account needs to be approved before you can save a listing."); return; }
     setError("");
     setBusy("draft");
     try {
@@ -267,6 +298,7 @@ export function SubmitListingForm() {
       return;
     }
     if (!token) { setError("Log in to submit a listing."); return; }
+    if (!approved) { setError("Your account needs to be approved before you can submit a listing."); return; }
     setError("");
     setBusy("submit");
     try {
@@ -313,6 +345,28 @@ export function SubmitListingForm() {
       </div>
     );
   }
+
+  if (checkingAccount) {
+    return (
+      <div className="space-y-4" aria-busy="true" aria-label="Checking your account">
+        <div className="h-24 animate-pulse rounded-2xl bg-ivory" />
+        <div className="h-64 animate-pulse rounded-2xl bg-ivory" />
+      </div>
+    );
+  }
+
+  if (accountError) {
+    return (
+      <div className="rounded-2xl border border-line bg-ivory p-8 text-center">
+        <Alert tone="error">{accountError}</Alert>
+        <button type="button" onClick={recheckAccount} className="mt-4 rounded-full bg-ink px-6 py-3 text-sm font-bold text-white hover:bg-ink/85">
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (account && !approved) return <AccountNotApproved account={account} action="list a property" />;
 
   if (alreadySubmitted || submitted) {
     const item = (submitted ?? alreadySubmitted)!;
@@ -488,34 +542,56 @@ export function SubmitListingForm() {
         </div>
       </Section>
 
-      <Section title="4. Photos" intro={`Up to ${MAX_PHOTOS}. The first photo is the cover.`}>
+      <Section title="4. Photos and video" intro={`Up to ${MAX_PHOTOS} photos, plus ${VIDEO_LIMITS}. The first photo is the cover.`}>
         <DropZone
           {...dropOn("photos")}
           active={dragging === "photos"}
           invalid={Boolean(errors.images)}
-          heading={busy === "files" ? "Preparing files…" : "Drag photos here"}
-          note="JPG or PNG. Large photos are resized automatically."
-          buttonLabel="Choose photos"
-          disabled={busy === "files" || images.length >= MAX_PHOTOS}
+          heading={
+            videoProgress !== null
+              ? `Adding the watermark to your video… ${Math.round(videoProgress * 100)}%`
+              : busy === "files"
+                ? "Preparing files…"
+                : "Drag photos or a video here"
+          }
+          note={
+            videoProgress !== null
+              ? "Keep this tab open; it takes about as long as the video plays."
+              : "JPG or PNG photos and one video. Everything gets the JVA watermark."
+          }
+          progress={videoProgress}
+          buttonLabel="Choose files"
+          disabled={busy === "files" || (images.filter((url) => !isVideoUrl(url)).length >= MAX_PHOTOS && images.some(isVideoUrl))}
           onChoose={() => photoInput.current?.click()}
         />
-        <input ref={photoInput} type="file" accept="image/*" multiple hidden onChange={(event) => addPhotos(event.target.files)} />
+        <input ref={photoInput} type="file" accept="image/*,video/*" multiple hidden onChange={(event) => addPhotos(event.target.files)} />
         {errors.images ? <p className="mt-2 text-xs font-medium text-red-700">{errors.images}</p> : null}
         {images.length ? (
           <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {images.map((src, index) => (
-              <li key={src.slice(-32) + index} className="relative overflow-hidden rounded-xl border border-line">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt={`Photo ${index + 1}`} className="aspect-[4/3] w-full object-cover" />
-                {index === 0 ? (
+              <li key={src.slice(-32) + index} className="relative overflow-hidden rounded-xl border border-line bg-ink">
+                {isVideoUrl(src) ? (
+                  <video src={src} controls muted playsInline preload="metadata" className="aspect-[4/3] w-full object-cover" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={src} alt={`Photo ${index + 1}`} className="aspect-[4/3] w-full object-cover" />
+                )}
+                {isVideoUrl(src) ? (
+                  <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-[0.6875rem] font-bold text-gold">
+                    <FiVideo aria-hidden="true" /> Video
+                  </span>
+                ) : index === 0 ? (
                   <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-[0.6875rem] font-bold text-gold">
                     <FiStar aria-hidden="true" /> Cover
                   </span>
                 ) : null}
                 <button
                   type="button"
-                  onClick={() => setImages((current) => current.filter((_, i) => i !== index))}
-                  aria-label={`Remove photo ${index + 1}`}
+                  onClick={() => {
+                    discardVideo(src);
+                    setImages((current) => current.filter((_, i) => i !== index));
+                  }}
+                  aria-label={isVideoUrl(src) ? "Remove the video" : `Remove photo ${index + 1}`}
                   className="absolute top-2 right-2 grid h-7 w-7 place-items-center rounded-full bg-white/95 text-red-700 shadow"
                 >
                   <FiX aria-hidden="true" />
@@ -671,12 +747,15 @@ function DropZone({
   buttonLabel,
   disabled,
   onChoose,
+  progress = null,
   ...dropHandlers
 }: {
   active: boolean;
   invalid: boolean;
   heading: string;
   note: string;
+  /** 0–1 to show a progress bar, e.g. while a video is watermarked. */
+  progress?: number | null;
   buttonLabel: string;
   disabled: boolean;
   onChoose: () => void;
@@ -695,6 +774,11 @@ function DropZone({
       <FiUploadCloud aria-hidden="true" className="mx-auto h-8 w-8 text-gold-deep" />
       <p className="mt-3 font-semibold text-ink">{heading}</p>
       <p className="mt-1 text-xs text-muted">{note}</p>
+      {progress !== null ? (
+        <div className="mx-auto mt-3 h-1.5 max-w-xs overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
+          <div className="h-full rounded-full bg-gold transition-[width]" style={{ width: `${progress * 100}%` }} />
+        </div>
+      ) : null}
       <button
         type="button"
         onClick={onChoose}

@@ -1,6 +1,7 @@
 import { API_TIMEOUT_MS, fetchFailure, reportUnauthorized } from "@/lib/api/session";
 import { uploadFile } from "@/lib/api/auth";
 import type { ListingSubmission, NewEnquiry, SubmittedDocument } from "@/lib/inbox/types";
+import { joinMedia, splitMedia } from "@/lib/videoWatermark";
 
 // ── Listing submissions → real FastAPI backend ──────────────────────────────
 
@@ -39,6 +40,7 @@ export type SubmissionInput = {
     description: string;
     highlights: string[];
     images: string[];
+    videos?: string[];
     jv?: { sharingFormula: string; sharingNegotiable?: boolean; premium?: number; proposal: string; duration: string };
     saleTerms?: { acceptedFeeTerms: true; feeRate: number };
     ownerName: string;
@@ -50,22 +52,24 @@ export type SubmissionInput = {
  * If the URL is already a public https:// URL, returns it unchanged.
  */
 async function uploadDataUrl(dataUrl: string, filename: string, token: string): Promise<string> {
-  if (!dataUrl.startsWith("data:")) return dataUrl;
+  // data: URLs are photos and documents from the form; blob: URLs are prepared videos (see videoWatermark.ts).
+  if (!dataUrl.startsWith("data:") && !dataUrl.startsWith("blob:")) return dataUrl;
   const res = await fetch(dataUrl);
   const blob = await res.blob();
-  const ext = blob.type.split("/")[1] || "jpg";
+  const ext = blob.type.split(";")[0]!.split("/")[1] || "jpg";
   const name = filename.includes(".") ? filename : `${filename}.${ext}`;
   return uploadFile(new File([blob], name, { type: blob.type }), token);
 }
 
 /**
- * Uploads any base64 images and documents in the input to Supabase Storage,
- * replacing them with public URLs before sending to the backend.
+ * Uploads any new photos, video and documents in the input to Supabase Storage,
+ * replacing them with public URLs before sending to the backend. Photos go in
+ * `images` and the video in `videos`.
  */
 async function prepareInput(input: SubmissionInput, token: string): Promise<SubmissionInput> {
-  const uploadedImages = await Promise.all(
-    input.listing.images.map((url, i) => uploadDataUrl(url, `photo-${i}`, token)),
-  );
+  const media = splitMedia(joinMedia(input.listing.images, input.listing.videos));
+  const uploadedImages = await Promise.all(media.images.map((url, i) => uploadDataUrl(url, `photo-${i}`, token)));
+  const uploadedVideos = await Promise.all(media.videos.map((url) => uploadDataUrl(url, "video", token)));
   const uploadedDocuments = await Promise.all(
     input.documents.map(async (doc) => ({
       ...doc,
@@ -75,7 +79,7 @@ async function prepareInput(input: SubmissionInput, token: string): Promise<Subm
   return {
     ...input,
     documents: uploadedDocuments,
-    listing: { ...input.listing, images: uploadedImages },
+    listing: { ...input.listing, images: uploadedImages, videos: uploadedVideos },
   };
 }
 
