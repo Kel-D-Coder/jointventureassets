@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FiArrowRight, FiCheckCircle, FiMaximize, FiMapPin } from "react-icons/fi";
 import { DealBadge } from "@/components/listings/DealBadge";
-import { propertyTypeLabel } from "@/components/listings/labels";
+import { priceNegotiableLabel, propertyTypeLabel } from "@/components/listings/labels";
 import { formatNairaShort, formatSize } from "@/lib/format";
 import type { Listing } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
@@ -53,6 +53,9 @@ export function ListingCard({ listing }: { listing: Listing }) {
               {listing.dealType === "jv" ? "Land value" : "Asking price"}
             </p>
             <p className="mt-0.5 text-lg font-extrabold text-ink tabular-nums">{formatNairaShort(listing.price)}</p>
+            {listing.dealType === "sale" && listing.priceNegotiable ? (
+              <p className="text-[0.6875rem] font-semibold text-muted">{priceNegotiableLabel[listing.priceNegotiable]}</p>
+            ) : null}
           </div>
           {listing.jv ? (
             <div className="text-right">

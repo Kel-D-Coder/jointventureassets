@@ -43,6 +43,7 @@ export type SubmissionInput = {
     videos?: string[];
     jv?: { sharingFormula: string; sharingNegotiable?: boolean; premium?: number; proposal: string; duration: string };
     saleTerms?: { acceptedFeeTerms: true; feeRate: number };
+    priceNegotiable?: "negotiable" | "slightly_negotiable" | "fixed";
     ownerName: string;
   };
 };

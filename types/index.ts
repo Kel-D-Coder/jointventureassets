@@ -34,6 +34,8 @@ export interface Listing {
   };
   ownerName: string;
   status: ListingStatus;
+  /** Sale listings: whether the asking price is negotiable. Missing on older listings. */
+  priceNegotiable?: PriceNegotiable;
   featured: boolean;
   verified: boolean;
   views: number;
@@ -90,3 +92,6 @@ export interface AuthUser {
   role: string;
   category: string;
 }
+
+/** Sale listings: how much room there is on the asking price. */
+export type PriceNegotiable = "negotiable" | "slightly_negotiable" | "fixed";

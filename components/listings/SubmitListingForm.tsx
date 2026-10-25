@@ -15,9 +15,9 @@ import { MAX_DOCUMENT_MB, fileSize, toDocument } from "@/lib/files";
 import { cx, formatNaira } from "@/lib/format";
 import { SALE_FEE_RATE, saleFee } from "@/lib/fees";
 import { Alert, Field, MoneyInput, Select, SubmitButton, YesNo, booleanAnswer, inputClass, premiumAnswer, type YesNoValue } from "@/components/ui/form";
-import { dealTypeLabel, propertyTypeLabel, sharingFormulas, titleDocuments } from "@/components/listings/labels";
+import { dealTypeLabel, priceNegotiableLabel, priceNegotiableOptions, propertyTypeLabel, sharingFormulas, titleDocuments } from "@/components/listings/labels";
 import type { ListingSubmission, SubmittedDocument } from "@/lib/inbox/types";
-import type { DealType, PropertyType } from "@/types";
+import type { DealType, PriceNegotiable, PropertyType } from "@/types";
 
 const MAX_PHOTOS = 8;
 const MAX_DOCUMENTS = 6;
@@ -46,6 +46,8 @@ const emptyForm = {
   isOwner: true,
   /** Sale listings: the seller agrees to the facilitation fee before submitting. */
   acceptedSaleFee: false,
+  /** Sale listings: how open the asking price is. */
+  priceNegotiable: "" as "" | PriceNegotiable,
   ownerName: "",
   fullName: "",
   email: "",
@@ -74,6 +76,7 @@ function validate(form: FormState, images: string[], documents: SubmittedDocumen
   if (!form.fullName.trim()) errors.fullName = "Enter your name.";
   if (!form.email.trim()) errors.email = "Enter your email.";
   if (!form.phoneNumber.trim()) errors.phoneNumber = "Enter a phone number we can call.";
+  if (form.dealType === "sale" && !form.priceNegotiable) errors.priceNegotiable = "Choose whether the price is negotiable.";
   if (form.dealType === "sale" && !form.acceptedSaleFee) errors.acceptedSaleFee = "Agree to the facilitation fee to submit a property for sale.";
   return errors;
 }
@@ -101,6 +104,7 @@ function formFromSubmission(submission: ListingSubmission): FormState {
     highlights: listing.highlights.join("\n"),
     isOwner: submission.isOwner,
     acceptedSaleFee: Boolean(listing.saleTerms?.acceptedFeeTerms),
+    priceNegotiable: listing.priceNegotiable ?? "",
     ownerName: submission.isOwner ? "" : listing.ownerName,
     fullName: contact.fullName,
     email: contact.email,
@@ -261,6 +265,7 @@ export function SubmitListingForm() {
               duration: form.duration.trim(),
             }
           : undefined,
+      priceNegotiable: form.dealType === "sale" && form.priceNegotiable ? form.priceNegotiable : undefined,
       saleTerms: form.dealType === "sale" && form.acceptedSaleFee ? { acceptedFeeTerms: true, feeRate: SALE_FEE_RATE } : undefined,
       ownerName: form.isOwner ? form.fullName.trim() : form.ownerName.trim(),
     },
@@ -465,6 +470,39 @@ export function SubmitListingForm() {
             <MoneyInput id="price" value={form.price} onChange={(value) => set("price", value)} placeholder="e.g. 150,000,000" />
           </Field>
         </div>
+
+        {form.dealType === "sale" ? (
+          <fieldset className="mt-6">
+            <legend className="mb-2 text-sm font-semibold text-ink">
+              Is the price negotiable?<span className="ml-0.5 text-gold-deep" aria-hidden="true">*</span>
+            </legend>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {priceNegotiableOptions.map((option) => (
+                <label
+                  key={option}
+                  className={cx(
+                    "flex cursor-pointer items-center gap-2.5 rounded-xl border bg-white px-4 py-3 text-sm text-ink has-checked:border-gold has-checked:bg-gold-soft/40",
+                    errors.priceNegotiable ? "border-red-300" : "border-line",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="priceNegotiable"
+                    checked={form.priceNegotiable === option}
+                    onChange={() => set("priceNegotiable", option)}
+                    className="accent-[#c9a24a]"
+                  />
+                  {priceNegotiableLabel[option]}
+                </label>
+              ))}
+            </div>
+            {errors.priceNegotiable ? (
+              <p className="mt-1.5 text-xs font-medium text-red-700">{errors.priceNegotiable}</p>
+            ) : (
+              <p className="mt-1.5 text-xs text-muted">Shown on the listing so buyers know where they stand.</p>
+            )}
+          </fieldset>
+        ) : null}
 
         {form.dealType === "sale" ? <SellerFee price={Number(form.price) || 0} /> : null}
 

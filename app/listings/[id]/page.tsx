@@ -10,7 +10,7 @@ import { getListing } from "@/lib/api/listings";
 import { EnquiryForm } from "@/components/enquiries/EnquiryForm";
 import { ListingGallery } from "@/components/listings/ListingGallery";
 import { ListingCard } from "@/components/listings/ListingCard";
-import { propertyTypeLabel } from "@/components/listings/labels";
+import { priceNegotiableLabel, propertyTypeLabel } from "@/components/listings/labels";
 import { formatNaira, formatSize, premiumText } from "@/lib/format";
 import { isSampleListing } from "@/lib/data/sampleListing";
 import type { Listing } from "@/types";
@@ -87,6 +87,11 @@ export default async function ListingDetailPage({ params }: Props) {
             <div className="shrink-0 lg:border-l lg:border-white/10 lg:pl-8 lg:text-right">
               <p className="text-xs font-semibold tracking-wide text-white/55 uppercase">{listing.dealType === "jv" ? "Land value" : "Asking price"}</p>
               <p className="mt-1 font-display text-4xl leading-none text-white sm:text-5xl">{formatNaira(listing.price)}</p>
+              {listing.dealType === "sale" && listing.priceNegotiable ? (
+                <p className="mt-4 inline-flex items-center rounded-full bg-gold/15 px-3 py-1.5 text-sm font-semibold text-gold-soft ring-1 ring-gold/30">
+                  {priceNegotiableLabel[listing.priceNegotiable]}
+                </p>
+              ) : null}
               {listing.jv ? (
                 <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold/15 px-3 py-1.5 text-sm font-semibold text-gold-soft ring-1 ring-gold/30">
                   {listing.jv.sharingFormula} sharing
