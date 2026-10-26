@@ -10,9 +10,9 @@ import { getListing } from "@/lib/api/listings";
 import { EnquiryForm } from "@/components/enquiries/EnquiryForm";
 import { ListingGallery } from "@/components/listings/ListingGallery";
 import { ListingCard } from "@/components/listings/ListingCard";
-import { priceNegotiableLabel, propertyTypeLabel } from "@/components/listings/labels";
+import { ExpandableDescription } from "@/components/listings/ExpandableDescription";
+import { SHARING_TBD, isEstate, priceNegotiableLabel, priceText, propertyTypeLabel, sharingFormulaLabel, sizeText, splitTitles } from "@/components/listings/labels";
 import { formatNaira, formatSize, premiumText } from "@/lib/format";
-import { isSampleListing } from "@/lib/data/sampleListing";
 import type { Listing } from "@/types";
 import { coverOf, joinMedia } from "@/lib/videoWatermark";
 
@@ -44,10 +44,10 @@ export default async function ListingDetailPage({ params }: Props) {
     .sort((a, b) => Number(b.state === listing.state) - Number(a.state === listing.state))
     .slice(0, 3);
   const facts = [
-    { label: listing.dealType === "jv" ? "Land value" : "Asking price", value: formatNaira(listing.price) },
-    { label: "Size", value: formatSize(listing.sizeSqm) },
+    { label: listing.dealType === "jv" ? "Land value" : "Asking price", value: priceText(listing) },
+    { label: isEstate(listing) ? "Plot sizes" : "Size", value: sizeText(listing) },
     { label: "Property type", value: propertyTypeLabel[listing.propertyType] },
-    { label: "Title document", value: listing.titleDocument },
+    { label: splitTitles(listing.titleDocument).length > 1 ? "Title documents" : "Title document", value: listing.titleDocument },
   ];
 
   return (
@@ -86,16 +86,16 @@ export default async function ListingDetailPage({ params }: Props) {
 
             <div className="shrink-0 lg:border-l lg:border-white/10 lg:pl-8 lg:text-right">
               <p className="text-xs font-semibold tracking-wide text-white/55 uppercase">{listing.dealType === "jv" ? "Land value" : "Asking price"}</p>
-              <p className="mt-1 font-display text-4xl leading-none text-white sm:text-5xl">{formatNaira(listing.price)}</p>
-              {listing.dealType === "sale" && listing.priceNegotiable ? (
+              <p className="mt-1 font-display text-4xl leading-none text-white sm:text-5xl">{priceText(listing)}</p>
+              {listing.dealType === "sale" && listing.priceNegotiable && !isEstate(listing) ? (
                 <p className="mt-4 inline-flex items-center rounded-full bg-gold/15 px-3 py-1.5 text-sm font-semibold text-gold-soft ring-1 ring-gold/30">
                   {priceNegotiableLabel[listing.priceNegotiable]}
                 </p>
               ) : null}
               {listing.jv ? (
                 <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold/15 px-3 py-1.5 text-sm font-semibold text-gold-soft ring-1 ring-gold/30">
-                  {listing.jv.sharingFormula} sharing
-                  {listing.jv.sharingNegotiable !== undefined ? (
+                  {listing.jv.sharingFormula === SHARING_TBD ? "Sharing to be discussed" : `${listing.jv.sharingFormula} sharing`}
+                  {listing.jv.sharingFormula !== SHARING_TBD && listing.jv.sharingNegotiable !== undefined ? (
                     <span className="font-medium text-white/60">· {listing.jv.sharingNegotiable ? "Negotiable" : "Fixed"}</span>
                   ) : null}
                 </p>
@@ -123,44 +123,43 @@ export default async function ListingDetailPage({ params }: Props) {
               ))}
             </dl>
 
-            {listing.jv ? (
-              <section className="relative overflow-hidden rounded-3xl bg-ink p-6 text-white shadow-[0_24px_60px_-30px_rgb(14_17_22/0.6)] sm:p-8">
-                <PanelDecor glow="bottom-left" />
-                <p className="relative text-xs font-bold tracking-[0.18em] text-gold uppercase">Joint-venture terms</p>
-                <dl className="relative mt-5 grid gap-6 sm:grid-cols-2">
-                  <div>
-                    <dt className="text-sm text-gray-400">Sharing formula</dt>
-                    <dd className="mt-1 flex flex-wrap items-center gap-3">
-                      <span className="font-display text-3xl text-gold">{listing.jv.sharingFormula}</span>
-                      {listing.jv.sharingNegotiable !== undefined ? (
-                        <span className={listing.jv.sharingNegotiable ? "rounded-full bg-gold/15 px-2.5 py-1 text-xs font-bold text-gold" : "rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold text-gray-300"}>
-                          {listing.jv.sharingNegotiable ? "Negotiable" : "Fixed, not negotiable"}
-                        </span>
-                      ) : null}
-                    </dd>
-                    <dd className="text-xs text-gray-400">Landowner / developer</dd>
-                  </div>
-                  {premiumText(listing.jv.premium) ? (
-                    <div>
-                      <dt className="text-sm text-gray-400">Premium</dt>
-                      <dd className="mt-1 font-display text-3xl text-white">{premiumText(listing.jv.premium)}</dd>
-                      <dd className="text-xs text-gray-400">{listing.jv.premium ? "Paid upfront by the developer" : "No upfront payment to the landowner"}</dd>
-                    </div>
-                  ) : null}
-                  <div>
-                    <dt className="text-sm text-gray-400">Proposal</dt>
-                    <dd className="mt-1 font-semibold">{listing.jv.proposal || "No"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-gray-400">Build period</dt>
-                    <dd className="mt-1 font-semibold">{listing.jv.duration}</dd>
-                  </div>
-                </dl>
-              </section>
+            {listing.jv ? <JvTerms jv={listing.jv} /> : null}
+
+            {isEstate(listing) ? (
+              <Panel title="Plot sizes & prices" subtitle="Each plot size has its own price. Ask about any of them in the enquiry form.">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-lg text-left text-sm">
+                    <thead className="text-xs font-semibold tracking-wide text-muted uppercase">
+                      <tr className="border-b border-line [&>th]:pb-3">
+                        <th>Plot size</th>
+                        <th>Price</th>
+                        <th>Negotiable</th>
+                        <th className="text-right">Initial deposit</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line [&_td]:py-3.5">
+                      {listing.plotOptions!.map((option, index) => (
+                        <tr key={index}>
+                          <td className="font-display text-lg text-ink">{formatSize(option.sizeSqm)}</td>
+                          <td className="font-semibold text-ink tabular-nums">{formatNaira(option.price)}</td>
+                          <td>
+                            {option.priceNegotiable ? (
+                              <span className="rounded-full bg-ivory px-2.5 py-1 text-xs font-semibold text-ink ring-1 ring-line">{priceNegotiableLabel[option.priceNegotiable]}</span>
+                            ) : (
+                              <span className="text-muted">Not stated</span>
+                            )}
+                          </td>
+                          <td className="text-right tabular-nums text-muted">{option.deposit ? formatNaira(option.deposit) : "None"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Panel>
             ) : null}
 
             <Panel title={`About this ${listing.dealType === "jv" ? "opportunity" : "property"}`}>
-              <p className="leading-relaxed text-gray-700">{listing.description}</p>
+              <ExpandableDescription text={listing.description} />
               {listing.highlights.length ? (
                 <ul className="mt-6 grid gap-3 sm:grid-cols-2">
                   {listing.highlights.map((highlight) => (
@@ -196,7 +195,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 eyebrow={listing.dealType === "jv" ? "Joint venture enquiry" : "Purchase enquiry"}
                 jointVenture={listing.dealType === "jv"}
                 salePrice={listing.dealType === "sale" ? listing.price : undefined}
-                sample={isSampleListing(listing.id)}
+                plotOptions={isEstate(listing) ? listing.plotOptions : undefined}
                 defaultMessage={
                   listing.dealType === "jv"
                     ? `I'm interested in partnering on "${listing.title}". Please share the full JV terms.`
@@ -225,5 +224,79 @@ export default async function ListingDetailPage({ params }: Props) {
         ) : null}
       </div>
     </main>
+  );
+}
+
+/**
+ * The joint-venture terms panel. Sharing formula and premium sit side by side;
+ * what can be built and the build period go underneath, each only when it's given.
+ */
+function JvTerms({ jv }: { jv: NonNullable<Listing["jv"]> }) {
+  const formula = jv.sharingFormula?.trim();
+  const toBeDiscussed = !formula || formula === SHARING_TBD;
+  const premium = premiumText(jv.premium);
+  const proposal = jv.proposal?.trim();
+  const duration = jv.duration?.trim();
+  const headline = [
+    formula
+      ? {
+          label: "Sharing formula",
+          value: sharingFormulaLabel(formula),
+          caption: toBeDiscussed ? "Agreed with the developer" : "Landowner / developer",
+          tone: "text-gold",
+          // "Negotiable / fixed" only means something once there's a formula to negotiate.
+          tag: !toBeDiscussed && jv.sharingNegotiable !== undefined ? (jv.sharingNegotiable ? "Negotiable" : "Fixed") : undefined,
+          tagTone: jv.sharingNegotiable ? "bg-gold/15 text-gold ring-gold/30" : "bg-white/10 text-gray-300 ring-white/15",
+        }
+      : null,
+    premium
+      ? {
+          label: "Premium",
+          value: premium,
+          caption: jv.premium ? "Paid upfront by the developer" : "No upfront payment to the landowner",
+          tone: "text-white",
+          tag: undefined,
+          tagTone: "",
+        }
+      : null,
+  ].filter((item): item is NonNullable<typeof item> => item !== null);
+  const details = [
+    proposal ? { label: "What can be built", value: proposal } : null,
+    duration ? { label: "Build period", value: duration } : null,
+  ].filter((item): item is NonNullable<typeof item> => item !== null);
+
+  if (!headline.length && !details.length) return null;
+
+  return (
+    <section className="relative overflow-hidden rounded-3xl bg-ink p-6 text-white shadow-[0_24px_60px_-30px_rgb(14_17_22/0.6)] sm:p-8">
+      <PanelDecor glow="bottom-left" />
+      <p className="relative text-xs font-bold tracking-[0.18em] text-gold uppercase">Joint-venture terms</p>
+
+      {headline.length ? (
+        <dl className={`relative mt-5 grid gap-4 ${headline.length > 1 ? "sm:grid-cols-2" : ""}`}>
+          {headline.map((item) => (
+            <div key={item.label} className="rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10">
+              <dt className="flex items-center justify-between gap-3 text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                {item.label}
+                {item.tag ? <span className={`rounded-full px-2.5 py-0.5 text-[0.6875rem] font-bold tracking-normal normal-case ring-1 ${item.tagTone}`}>{item.tag}</span> : null}
+              </dt>
+              <dd className={`mt-2 font-display text-3xl leading-tight ${item.tone}`}>{item.value}</dd>
+              <dd className="mt-1 text-xs text-gray-400">{item.caption}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
+      {details.length ? (
+        <dl className={`relative mt-4 grid gap-4 ${details.length > 1 ? "sm:grid-cols-[2fr_1fr]" : ""}`}>
+          {details.map((item) => (
+            <div key={item.label} className="rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10">
+              <dt className="text-xs font-semibold tracking-wide text-gray-400 uppercase">{item.label}</dt>
+              <dd className="mt-2 leading-relaxed font-semibold whitespace-pre-line text-white">{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+    </section>
   );
 }

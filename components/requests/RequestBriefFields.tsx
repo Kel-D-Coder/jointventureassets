@@ -5,7 +5,6 @@ import { FiSearch } from "react-icons/fi";
 import { Field, MoneyInput, Select, YesNo, inputClass } from "@/components/ui/form";
 import {
   developmentTypes,
-  housingProposals,
   jvPropertyKinds,
   partnershipTypes,
   paymentMethods,
@@ -22,7 +21,7 @@ import type { RequestType } from "@/types";
 /** What the member wants us to find, with the fields that matter for that kind of request. */
 export function RequestBriefFields({ type, value, onChange }: { type: RequestType; value: Brief; onChange: (next: Brief) => void }) {
   const set = <K extends keyof Brief>(key: K, next: Brief[K]) => onChange({ ...value, [key]: next });
-  const text = (key: keyof Brief) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => set(key, event.target.value as never);
+  const text = (key: keyof Brief) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => set(key, event.target.value as never);
   const summary = requestSummary({
     requestType: type,
     location: value.location,
@@ -86,8 +85,15 @@ export function RequestBriefFields({ type, value, onChange }: { type: RequestTyp
 
       {type === "jv" ? (
         <>
-          <Field label="What do you plan to build?" htmlFor="housingProposal" required >
-            <Select id="housingProposal" value={value.housingProposal} onChange={text("housingProposal")} options={housingProposals} placeholder="Select a plan" />
+          <Field label="What do you plan to build?" htmlFor="housingProposal" required hint="In your own words: how many units, and of what.">
+            <textarea
+              id="housingProposal"
+              rows={3}
+              value={value.housingProposal}
+              onChange={text("housingProposal")}
+              placeholder="e.g. 6 units of apartments, 3 units of duplexes"
+              className={inputClass}
+            />
           </Field>
           <Field label="Sharing formula you'd accept" htmlFor="sharingFormula" required hint="Landowner / developer.">
             <Select id="sharingFormula" value={value.sharingFormula} onChange={text("sharingFormula")} options={sharingFormulas} placeholder="Select a formula" />

@@ -2,8 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FiArrowRight, FiCheckCircle, FiMaximize, FiMapPin } from "react-icons/fi";
 import { DealBadge } from "@/components/listings/DealBadge";
-import { priceNegotiableLabel, propertyTypeLabel } from "@/components/listings/labels";
-import { formatNairaShort, formatSize } from "@/lib/format";
+import { isEstate, priceNegotiableLabel, priceText, propertyTypeLabel, sharingFormulaLabel, sizeText, SHARING_TBD } from "@/components/listings/labels";
 import type { Listing } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
 
@@ -41,8 +40,9 @@ export function ListingCard({ listing }: { listing: Listing }) {
 
         <div className="mt-3 mb-5 flex flex-wrap gap-2 text-xs font-medium text-muted">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-ivory px-2.5 py-1">
-            <FiMaximize aria-hidden="true" /> {formatSize(listing.sizeSqm)}
+            <FiMaximize aria-hidden="true" /> {sizeText(listing)}
           </span>
+          {isEstate(listing) ? <span className="rounded-full bg-gold-soft/70 px-2.5 py-1 font-semibold text-gold-deep">{listing.plotOptions!.length} plot sizes</span> : null}
           <span className="rounded-full bg-ivory px-2.5 py-1">{propertyTypeLabel[listing.propertyType]}</span>
           <span className="rounded-full bg-ivory px-2.5 py-1">{listing.titleDocument}</span>
         </div>
@@ -52,16 +52,16 @@ export function ListingCard({ listing }: { listing: Listing }) {
             <p className="text-[0.6875rem] font-bold tracking-wider text-muted uppercase">
               {listing.dealType === "jv" ? "Land value" : "Asking price"}
             </p>
-            <p className="mt-0.5 text-lg font-extrabold text-ink tabular-nums">{formatNairaShort(listing.price)}</p>
-            {listing.dealType === "sale" && listing.priceNegotiable ? (
+            <p className="mt-0.5 text-lg font-extrabold text-ink tabular-nums">{priceText(listing, true)}</p>
+            {listing.dealType === "sale" && listing.priceNegotiable && !isEstate(listing) ? (
               <p className="text-[0.6875rem] font-semibold text-muted">{priceNegotiableLabel[listing.priceNegotiable]}</p>
             ) : null}
           </div>
           {listing.jv ? (
             <div className="text-right">
               <p className="text-[0.6875rem] font-bold tracking-wider text-muted uppercase">Sharing</p>
-              <p className="mt-0.5 text-lg font-extrabold text-gold-deep">{listing.jv.sharingFormula}</p>
-              {listing.jv.sharingNegotiable !== undefined ? (
+              <p className="mt-0.5 text-lg font-extrabold text-gold-deep">{sharingFormulaLabel(listing.jv.sharingFormula)}</p>
+              {listing.jv.sharingFormula !== SHARING_TBD && listing.jv.sharingNegotiable !== undefined ? (
                 <p className="text-[0.6875rem] font-semibold text-muted">{listing.jv.sharingNegotiable ? "Negotiable" : "Fixed"}</p>
               ) : null}
             </div>

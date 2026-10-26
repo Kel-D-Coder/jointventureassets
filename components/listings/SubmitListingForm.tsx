@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { FiArrowRight, FiCheckCircle, FiFileText, FiSave, FiStar, FiTrash2, FiUploadCloud, FiVideo, FiX } from "react-icons/fi";
+import { FiArrowRight, FiCheckCircle, FiFileText, FiInfo, FiSave, FiStar, FiTrash2, FiUploadCloud, FiVideo, FiX } from "react-icons/fi";
 import { useAppSelector } from "@/hooks/hooks";
 import { useMyAccount } from "@/hooks/useMyAccount";
 import { AccountNotApproved } from "@/components/auth/AccountNotApproved";
@@ -15,9 +15,12 @@ import { MAX_DOCUMENT_MB, fileSize, toDocument } from "@/lib/files";
 import { cx, formatNaira } from "@/lib/format";
 import { SALE_FEE_RATE, saleFee } from "@/lib/fees";
 import { Alert, Field, MoneyInput, Select, SubmitButton, YesNo, booleanAnswer, inputClass, premiumAnswer, type YesNoValue } from "@/components/ui/form";
-import { dealTypeLabel, priceNegotiableLabel, priceNegotiableOptions, propertyTypeLabel, sharingFormulas, titleDocuments } from "@/components/listings/labels";
+import { dealTypeLabel, priceNegotiableLabel, priceNegotiableOptions, propertyTypeLabel, documentsToUpload, listInWords, sharingFormulaOptions, splitTitles, SHARING_TBD } from "@/components/listings/labels";
 import type { ListingSubmission, SubmittedDocument } from "@/lib/inbox/types";
 import type { DealType, PriceNegotiable, PropertyType } from "@/types";
+import { TitleDocumentPicker } from "@/components/listings/TitleDocumentPicker";
+import { PlotOptionsFields } from "@/components/listings/PlotOptionsFields";
+import { isEstate, plotOptionsFrom, plotRowsFrom, plotRowsProblem } from "@/components/listings/labels";
 
 const MAX_PHOTOS = 8;
 const MAX_DOCUMENTS = 6;
@@ -29,14 +32,18 @@ const emptyForm = {
   titleDocument: "C of O",
   sizeSqm: "",
   price: "",
+  /** Joint ventures: land value to be determined. */
+  landValueTbd: false,
+  /** Sale listings: an estate with several plot sizes, each with its own price. */
+  isEstate: false,
+  plotRows: plotRowsFrom(),
   sharingFormula: "40/60",
   sharingNegotiable: "" as YesNoValue,
   hasPremium: "" as YesNoValue,
   /** Digits only. */
   premium: "",
   duration: "",
-  /** Optional: "no" (the default) saves no proposal. */
-  hasProposal: "no" as YesNoValue,
+  /** Optional, typed: what a developer could build, e.g. "6 units of apartments". */
   proposal: "",
   area: "",
   city: "",
@@ -55,28 +62,33 @@ const emptyForm = {
 };
 
 type FormState = typeof emptyForm;
-type ErrorKey = keyof FormState | "images" | "documents";
+type ErrorKey = keyof FormState | "images" | "documents" | "plotOptions";
 
 /** Same required fields as publishing a listing in the admin dashboard, plus title documents and contact details. */
 function validate(form: FormState, images: string[], documents: SubmittedDocument[]): Partial<Record<ErrorKey, string>> {
   const errors: Partial<Record<ErrorKey, string>> = {};
   if (!form.title.trim()) errors.title = "Give the property a short title.";
-  if (!(Number(form.sizeSqm) > 0)) errors.sizeSqm = "Enter the size in square metres.";
-  if (!(Number(form.price) > 0)) errors.price = "Enter an amount in naira.";
-  if (form.dealType === "jv" && form.hasProposal === "yes" && !form.proposal.trim()) errors.proposal = "Describe the proposal, or choose No.";
-  if (form.dealType === "jv" && !form.sharingNegotiable) errors.sharingNegotiable = "Choose negotiable or fixed.";
+  const estate = form.dealType === "sale" && form.isEstate;
+  if (estate) {
+    const problem = plotRowsProblem(form.plotRows);
+    if (problem) errors.plotOptions = problem;
+  }
+  if (!estate && !(Number(form.sizeSqm) > 0)) errors.sizeSqm = "Enter the size in square metres.";
+  if (!estate && !(Number(form.price) > 0) && !(form.dealType === "jv" && form.landValueTbd)) errors.price = form.dealType === "jv" ? "Enter the land value, or tick TBD." : "Enter an amount in naira.";
+  if (form.dealType === "jv" && form.sharingFormula !== SHARING_TBD && !form.sharingNegotiable) errors.sharingNegotiable = "Choose negotiable or fixed.";
   if (form.dealType === "jv" && !form.hasPremium) errors.hasPremium = "Choose yes or no.";
   if (form.dealType === "jv" && form.hasPremium === "yes" && !(Number(form.premium) > 0)) errors.premium = "Enter the premium in naira.";
   if (!form.area.trim()) errors.area = "Add the area.";
   if (!form.city.trim()) errors.city = "Add the city.";
   if (!form.description.trim()) errors.description = "Describe the property.";
+  if (!splitTitles(form.titleDocument).length) errors.titleDocument = "Pick at least one title document.";
   if (!images.some((url) => !isVideoUrl(url))) errors.images = "Add at least one photo.";
   if (!documents.length) errors.documents = "Upload at least one title document so we can verify ownership.";
   if (!form.isOwner && !form.ownerName.trim()) errors.ownerName = "Who owns the property?";
   if (!form.fullName.trim()) errors.fullName = "Enter your name.";
   if (!form.email.trim()) errors.email = "Enter your email.";
   if (!form.phoneNumber.trim()) errors.phoneNumber = "Enter a phone number we can call.";
-  if (form.dealType === "sale" && !form.priceNegotiable) errors.priceNegotiable = "Choose whether the price is negotiable.";
+  if (!estate && form.dealType === "sale" && !form.priceNegotiable) errors.priceNegotiable = "Choose whether the price is negotiable.";
   if (form.dealType === "sale" && !form.acceptedSaleFee) errors.acceptedSaleFee = "Agree to the facilitation fee to submit a property for sale.";
   return errors;
 }
@@ -90,12 +102,15 @@ function formFromSubmission(submission: ListingSubmission): FormState {
     titleDocument: listing.titleDocument || emptyForm.titleDocument,
     sizeSqm: listing.sizeSqm ? String(listing.sizeSqm) : "",
     price: listing.price ? String(listing.price) : "",
+    landValueTbd: Boolean(listing.landValueTbd),
+    // TODO(backend): plotOptions only arrive once the server stores them.
+    isEstate: isEstate(listing),
+    plotRows: plotRowsFrom(listing.plotOptions),
     sharingFormula: listing.jv?.sharingFormula ?? emptyForm.sharingFormula,
     sharingNegotiable: booleanAnswer(listing.jv?.sharingNegotiable),
     hasPremium: premiumAnswer(listing.jv?.premium),
     premium: listing.jv?.premium ? String(listing.jv.premium) : "",
     duration: listing.jv?.duration ?? "",
-    hasProposal: listing.jv?.proposal ? "yes" : "no",
     proposal: listing.jv?.proposal ?? "",
     area: listing.area,
     city: listing.city,
@@ -132,7 +147,8 @@ export function SubmitListingForm() {
   const [error, setError] = useState("");
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [busy, setBusy] = useState<"draft" | "submit" | "delete" | "files" | null>(null);
-  /** 0–1 while the video is being watermarked. */
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  /** 0–1 while the video is being checked. */
   const [videoProgress, setVideoProgress] = useState<number | null>(null);
   const [dragging, setDragging] = useState<"photos" | "documents" | null>(null);
   const [submitted, setSubmitted] = useState<ListingSubmission | null>(null);
@@ -164,7 +180,7 @@ export function SubmitListingForm() {
   const onText = (key: keyof FormState) => (event: { target: { value: string } }) => set(key, event.target.value as never);
   const digits = (key: "sizeSqm") => (event: { target: { value: string } }) => set(key, event.target.value.replace(/[^\d]/g, ""));
 
-  /** Photos (up to MAX_PHOTOS) and at most one video; everything is watermarked as it's added. */
+  /** Photos (up to MAX_PHOTOS, watermarked as they're added) and at most one video, uploaded as it is. */
   const addPhotos = async (files: FileList | null) => {
     if (!files?.length) return;
     setBusy("files");
@@ -238,6 +254,9 @@ export function SubmitListingForm() {
     },
   });
 
+  // Estates: cheapest plot first. TODO(backend): send the whole list as `plotOptions` once the server stores it.
+  const cheapestPlot = form.dealType === "sale" && form.isEstate ? plotOptionsFrom(form.plotRows)[0] : undefined;
+
   const toInput = (): SubmissionInput => ({
     isOwner: form.isOwner,
     contact: { fullName: form.fullName.trim(), email: form.email.trim(), phoneNumber: form.phoneNumber.trim() },
@@ -249,8 +268,9 @@ export function SubmitListingForm() {
       area: form.area.trim(),
       city: form.city.trim(),
       state: form.state.trim(),
-      sizeSqm: Number(form.sizeSqm) || 0,
-      price: Number(form.price) || 0,
+      sizeSqm: cheapestPlot ? cheapestPlot.sizeSqm : Number(form.sizeSqm) || 0,
+      price: cheapestPlot ? cheapestPlot.price : form.dealType === "jv" && form.landValueTbd ? 0 : Number(form.price) || 0,
+      landValueTbd: form.dealType === "jv" && form.landValueTbd ? true : undefined,
       titleDocument: form.titleDocument,
       description: form.description.trim(),
       highlights: form.highlights.split("\n").map((line) => line.trim()).filter(Boolean),
@@ -259,13 +279,14 @@ export function SubmitListingForm() {
         form.dealType === "jv"
           ? {
               sharingFormula: form.sharingFormula,
-              sharingNegotiable: form.sharingNegotiable ? form.sharingNegotiable === "yes" : undefined,
+              // "To be discussed" has no ratio to negotiate yet.
+              sharingNegotiable: form.sharingFormula !== SHARING_TBD && form.sharingNegotiable ? form.sharingNegotiable === "yes" : undefined,
               premium: form.hasPremium === "no" ? 0 : form.hasPremium === "yes" && Number(form.premium) > 0 ? Number(form.premium) : undefined,
-              proposal: form.hasProposal === "yes" ? form.proposal.trim() : "",
+              proposal: form.proposal.trim(),
               duration: form.duration.trim(),
             }
           : undefined,
-      priceNegotiable: form.dealType === "sale" && form.priceNegotiable ? form.priceNegotiable : undefined,
+      priceNegotiable: cheapestPlot ? cheapestPlot.priceNegotiable : form.dealType === "sale" && form.priceNegotiable ? form.priceNegotiable : undefined,
       saleTerms: form.dealType === "sale" && form.acceptedSaleFee ? { acceptedFeeTerms: true, feeRate: SALE_FEE_RATE } : undefined,
       ownerName: form.isOwner ? form.fullName.trim() : form.ownerName.trim(),
     },
@@ -318,7 +339,7 @@ export function SubmitListingForm() {
   };
 
   const discardDraft = async () => {
-    if (!draftId || !token || !window.confirm("Delete this draft? This can't be undone.")) return;
+    if (!draftId || !token) return;
     setBusy("delete");
     try {
       await deleteSubmission(draftId, token);
@@ -326,6 +347,7 @@ export function SubmitListingForm() {
     } catch (caught) {
       setError(errorMessage(caught, "Couldn't delete the draft."));
       setBusy(null);
+      setConfirmingDelete(false);
     }
   };
 
@@ -450,7 +472,7 @@ export function SubmitListingForm() {
       <Section title="2. The property">
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Title" htmlFor="title" required error={errors.title} hint="e.g. 1,200 sqm plot for terrace duplexes" className="sm:col-span-2">
-            <input id="title" value={form.title} onChange={onText("title")} className={inputClass} />
+            <input id="title" value={form.title} onChange={(e) => set("title", e.target.value.toUpperCase())} className={inputClass} />
           </Field>
           <Field label="Property type" htmlFor="propertyType">
             <Select
@@ -460,18 +482,52 @@ export function SubmitListingForm() {
               options={Object.entries(propertyTypeLabel).map(([value, label]) => ({ value, label }))}
             />
           </Field>
-          <Field label="Title document type" htmlFor="titleDocument" hint="Upload a copy in step 5.">
-            <Select id="titleDocument" value={form.titleDocument} onChange={onText("titleDocument")} options={titleDocuments} />
+          <Field label="Title documents" required error={errors.titleDocument} hint="Pick all that apply. Upload copies in step 5." className="sm:col-span-2">
+            <TitleDocumentPicker value={form.titleDocument} onChange={(value) => set("titleDocument", value)} />
           </Field>
+          {form.dealType === "sale" ? (
+            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 text-sm text-ink sm:col-span-2 has-checked:border-gold has-checked:bg-gold-soft/40">
+              <input type="checkbox" checked={form.isEstate} onChange={(e) => set("isEstate", e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#c9a24a]" />
+              <span>
+                <span className="font-semibold">This is an estate with several plot sizes</span>
+                <span className="block text-xs text-muted">Add each plot size with its own price, negotiable option and initial deposit.</span>
+              </span>
+            </label>
+          ) : null}
+          {form.dealType === "sale" && form.isEstate ? (
+            <div className="sm:col-span-2">
+              <PlotOptionsFields rows={form.plotRows} onChange={(rows) => set("plotRows", rows)} error={errors.plotOptions} />
+            </div>
+          ) : (
+            <>
           <Field label="Size (sqm)" htmlFor="sizeSqm" required error={errors.sizeSqm} hint="1 hectare = 10,000 sqm">
             <input id="sizeSqm" inputMode="numeric" value={form.sizeSqm} onChange={digits("sizeSqm")} className={inputClass} />
           </Field>
           <Field label={form.dealType === "jv" ? "Land value (₦)" : "Asking price (₦)"} htmlFor="price" required error={errors.price}>
-            <MoneyInput id="price" value={form.price} onChange={(value) => set("price", value)} placeholder="e.g. 150,000,000" />
+            <MoneyInput
+              id="price"
+              value={form.price}
+              onChange={(value) => set("price", value)}
+              placeholder={form.dealType === "jv" && form.landValueTbd ? "To be determined" : "e.g. 150,000,000"}
+              disabled={form.dealType === "jv" && form.landValueTbd}
+            />
+            {form.dealType === "jv" ? (
+              <label className="mt-2 flex items-center gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={form.landValueTbd}
+                  onChange={(e) => setForm((current) => ({ ...current, landValueTbd: e.target.checked, price: e.target.checked ? "" : current.price }))}
+                  className="h-4 w-4 accent-[#c9a24a]"
+                />
+                TBD (to be determined)
+              </label>
+            ) : null}
           </Field>
+            </>
+          )}
         </div>
 
-        {form.dealType === "sale" ? (
+        {form.dealType === "sale" && !form.isEstate ? (
           <fieldset className="mt-6">
             <legend className="mb-2 text-sm font-semibold text-ink">
               Is the price negotiable?<span className="ml-0.5 text-gold-deep" aria-hidden="true">*</span>
@@ -504,24 +560,26 @@ export function SubmitListingForm() {
           </fieldset>
         ) : null}
 
-        {form.dealType === "sale" ? <SellerFee price={Number(form.price) || 0} /> : null}
+        {form.dealType === "sale" ? <SellerFee price={cheapestPlot ? cheapestPlot.price : Number(form.price) || 0} /> : null}
 
         {form.dealType === "jv" ? (
           <div className="mt-6 grid gap-5 rounded-2xl bg-ivory p-5 sm:grid-cols-2">
             <p className="eyebrow text-gold-deep sm:col-span-2">Joint-venture terms</p>
             <Field label="Sharing formula" htmlFor="sharingFormula" hint="Landowner / developer">
-              <Select id="sharingFormula" value={form.sharingFormula} onChange={onText("sharingFormula")} options={sharingFormulas} />
+              <Select id="sharingFormula" value={form.sharingFormula} onChange={onText("sharingFormula")} options={sharingFormulaOptions} />
             </Field>
-            <YesNo
-              name="sharingNegotiable"
-              legend="Is the sharing formula negotiable?"
-              value={form.sharingNegotiable}
-              onChange={(value) => set("sharingNegotiable", value)}
-              yes="Negotiable"
-              no="Fixed"
-              hint="Shown on the listing so developers know."
-              error={errors.sharingNegotiable}
-            />
+            {form.sharingFormula !== SHARING_TBD ? (
+              <YesNo
+                name="sharingNegotiable"
+                legend="Is the sharing formula negotiable?"
+                value={form.sharingNegotiable}
+                onChange={(value) => set("sharingNegotiable", value)}
+                yes="Negotiable"
+                no="Fixed"
+                hint="Shown on the listing so developers know."
+                error={errors.sharingNegotiable}
+              />
+            ) : null}
             <YesNo
               name="hasPremium"
               legend="Is there a premium?"
@@ -540,22 +598,14 @@ export function SubmitListingForm() {
             <Field label="Build period" htmlFor="duration">
               <input id="duration" value={form.duration} onChange={onText("duration")} placeholder="e.g. 24 months" className={inputClass} />
             </Field>
-            <div className="grid gap-5 sm:col-span-2 sm:grid-cols-2">
-              <YesNo
-                name="hasProposal"
-                legend="Is there a proposal?"
-                value={form.hasProposal}
-                onChange={(value) => set("hasProposal", value)}
-                yes="Yes"
-                no="No"
-                hint="Optional. What you'd like a developer to build."
-              />
-              {form.hasProposal === "yes" ? (
-                <Field label="Proposal" htmlFor="proposal" required error={errors.proposal}>
-                  <input id="proposal" value={form.proposal} onChange={onText("proposal")} placeholder="e.g. 12 units of 3-bed apartments" className={inputClass} />
-                </Field>
-              ) : null}
-            </div>
+            <Field
+              label="What can be built here?"
+              htmlFor="proposal"
+              hint="Optional. Type it in your own words. Leave it blank if you're open to the developer's ideas."
+              className="sm:col-span-2"
+            >
+              <textarea id="proposal" rows={3} value={form.proposal} onChange={onText("proposal")} placeholder="e.g. 6 units of apartments, 3 units of duplexes" className={inputClass} />
+            </Field>
           </div>
         ) : null}
       </Section>
@@ -587,15 +637,15 @@ export function SubmitListingForm() {
           invalid={Boolean(errors.images)}
           heading={
             videoProgress !== null
-              ? `Adding the watermark to your video… ${Math.round(videoProgress * 100)}%`
+              ? "Checking your video…"
               : busy === "files"
                 ? "Preparing files…"
                 : "Drag photos or a video here"
           }
           note={
             videoProgress !== null
-              ? "Keep this tab open; it takes about as long as the video plays."
-              : "JPG or PNG photos and one video. Everything gets the JVA watermark."
+              ? "This only takes a moment."
+              : "JPG or PNG photos (they get the JVA watermark) and one video."
           }
           progress={videoProgress}
           buttonLabel="Choose files"
@@ -603,6 +653,13 @@ export function SubmitListingForm() {
           onChoose={() => photoInput.current?.click()}
         />
         <input ref={photoInput} type="file" accept="image/*,video/*" multiple hidden onChange={(event) => addPhotos(event.target.files)} />
+        {/* Videos are uploaded as recorded, so iPhone HEVC videos won't play everywhere. */}
+        <p className="mt-3 flex gap-2.5 rounded-xl border border-gold/30 bg-gold-soft/40 px-4 py-3 text-sm text-ink">
+          <FiInfo aria-hidden="true" className="mt-0.5 shrink-0 text-gold-deep" />
+          <span>
+            <strong className="font-semibold">Filming on an iPhone?</strong> Before recording, go to Settings → Camera → Formats and choose “Most Compatible”. Otherwise the video may not play in some browsers (Chrome on Windows, Firefox).
+          </span>
+        </p>
         {errors.images ? <p className="mt-2 text-xs font-medium text-red-700">{errors.images}</p> : null}
         {images.length ? (
           <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -642,7 +699,7 @@ export function SubmitListingForm() {
 
       <Section
         title="5. Title documents"
-        intro={`Upload clear copies of the documents that prove ownership: ${form.titleDocument === "Survey plan only" ? "the survey plan" : `the ${form.titleDocument}`}, survey plan, deed of assignment or receipts. Only our verification team sees them.`}
+        intro={`Upload clear copies of the documents that prove ownership: the ${listInWords(documentsToUpload(form.titleDocument))}, plus any receipts. Only our verification team sees them.`}
       >
         <DropZone
           {...dropOn("documents")}
@@ -758,9 +815,36 @@ export function SubmitListingForm() {
         </button>
         {savedAt ? <p className="text-xs text-muted">Draft saved at {timeFormat.format(savedAt)}</p> : <p className="text-xs text-muted">Nothing goes live until our team has verified it.</p>}
         {draftId ? (
-          <button type="button" onClick={discardDraft} disabled={busy !== null} className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 hover:underline disabled:opacity-50 sm:ml-auto">
-            <FiTrash2 aria-hidden="true" /> Delete draft
-          </button>
+          confirmingDelete ? (
+            // Two steps, like deleting a listing in the admin: no browser confirm box.
+            <div className="flex items-center gap-2 sm:ml-auto">
+              <button
+                type="button"
+                onClick={discardDraft}
+                disabled={busy !== null}
+                className="rounded-full bg-red-700 px-4 py-2 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-60"
+              >
+                {busy === "delete" ? "Deleting…" : "Confirm delete"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+                disabled={busy === "delete"}
+                className="rounded-full border border-line bg-white px-4 py-2 text-xs font-semibold text-ink hover:border-ink disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              disabled={busy !== null}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 hover:underline disabled:opacity-50 sm:ml-auto"
+            >
+              <FiTrash2 aria-hidden="true" /> Delete draft
+            </button>
+          )
         ) : null}
       </div>
     </form>
@@ -792,7 +876,7 @@ function DropZone({
   invalid: boolean;
   heading: string;
   note: string;
-  /** 0–1 to show a progress bar, e.g. while a video is watermarked. */
+  /** 0–1 to show a progress bar, e.g. while a video is checked. */
   progress?: number | null;
   buttonLabel: string;
   disabled: boolean;

@@ -43,7 +43,7 @@ export default function SubmissionList({ submissions }: { submissions: ListingSu
               <p className="mt-0.5 truncate text-sm text-muted">
                 {[
                   [submission.listing.area, submission.listing.city].filter(Boolean).join(", "),
-                  submission.listing.price ? formatNairaShort(submission.listing.price) : "",
+                  submission.listing.landValueTbd ? "Land value TBD" : submission.listing.price ? formatNairaShort(submission.listing.price) : "",
                 ]
                   .filter(Boolean)
                   .join(" · ") || "Not finished yet"}

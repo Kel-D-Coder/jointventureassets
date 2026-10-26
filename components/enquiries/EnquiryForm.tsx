@@ -2,14 +2,18 @@
 
 import { useState, type FormEvent } from "react";
 import { FiCheckCircle } from "react-icons/fi";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAppSelector } from "@/hooks/hooks";
 import { sendEnquiry } from "@/lib/api/inbox";
 import { errorMessage } from "@/lib/api/errors";
-import { cx, formatNaira } from "@/lib/format";
+import { cx, formatNaira, formatSize } from "@/lib/format";
 import { SALE_FEE_RATE, saleFee } from "@/lib/fees";
 import { Alert, SubmitButton, inputClass } from "@/components/ui/form";
 import { DocumentUpload } from "@/components/ui/DocumentUpload";
 import type { InboxEnquiry, SubmittedDocument } from "@/lib/inbox/types";
+import { priceNegotiableLabel } from "@/components/listings/labels";
+import type { PlotOption } from "@/types";
 
 /**
  * Asks about a listing or a member's request. Every enquiry lands in the
@@ -23,7 +27,7 @@ export function EnquiryForm({
   submitLabel,
   jointVenture = false,
   salePrice,
-  sample = false,
+  plotOptions,
 }: {
   target: InboxEnquiry["target"];
   eyebrow: string;
@@ -32,10 +36,11 @@ export function EnquiryForm({
   jointVenture?: boolean;
   /** Sale listings: the asking price, for the 5% facilitation fee terms. */
   salePrice?: number;
-  /** A sample listing: shows the whole flow but sends nothing. */
-  sample?: boolean;
+  /** Estates: the plot sizes to choose from; the chosen plot's price is used for the fee terms. */
+  plotOptions?: PlotOption[];
 }) {
   const { user, token } = useAppSelector((state) => state.auth);
+  const pathname = usePathname();
   const [form, setForm] = useState({
     fullName: user?.fullName ?? "",
     email: user?.email ?? "",
@@ -45,7 +50,11 @@ export function EnquiryForm({
   const [generateLoi, setGenerateLoi] = useState<"" | "yes" | "no">("");
   const [letterhead, setLetterhead] = useState<SubmittedDocument>();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const isSale = !jointVenture && salePrice !== undefined && salePrice > 0;
+  const [plotIndex, setPlotIndex] = useState<number | null>(null);
+  const plot = plotOptions && plotIndex !== null ? plotOptions[plotIndex] : undefined;
+  // An estate's fee terms use the chosen plot's price; until one is chosen there's nothing to show.
+  const askingPrice = plotOptions ? plot?.price : salePrice;
+  const isSale = !jointVenture && askingPrice !== undefined && askingPrice > 0;
   const [jvErrors, setJvErrors] = useState<{ generateLoi?: string; letterhead?: string }>({});
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -65,12 +74,12 @@ export function EnquiryForm({
       setJvErrors(problems);
       if (problems.generateLoi || problems.letterhead || !acceptedTerms) return;
     }
-    if (isSale && !acceptedTerms) {
-      setError("Please agree to the facilitation fee terms to send your enquiry.");
+    if (plotOptions && !plot) {
+      setError("Choose the plot size you're interested in.");
       return;
     }
-    if (sample) {
-      setSent(true);
+    if (isSale && !acceptedTerms) {
+      setError("Please agree to the facilitation fee terms to send your enquiry.");
       return;
     }
     setSending(true);
@@ -82,7 +91,7 @@ export function EnquiryForm({
           jv: jointVenture
             ? { generateLoi: generateLoi === "yes", letterhead: generateLoi === "yes" ? letterhead : undefined, acceptedFeeTerms: true }
             : undefined,
-          sale: isSale ? { acceptedFeeTerms: true, feeRate: SALE_FEE_RATE, askingPrice: salePrice } : undefined,
+          sale: isSale ? { acceptedFeeTerms: true, feeRate: SALE_FEE_RATE, askingPrice: askingPrice! } : undefined,
         },
         token,
       );
@@ -94,13 +103,31 @@ export function EnquiryForm({
     }
   };
 
+  if (!token) {
+    return (
+      <div className="space-y-3 text-center">
+        <p className="eyebrow text-gold-deep">{eyebrow}</p>
+        <p className="font-semibold text-ink">Log in to send an enquiry</p>
+        <p className="text-sm text-muted">You need a JVA account so our team can follow up and you can track your enquiry.</p>
+        <div className="flex flex-col gap-2 pt-1">
+          <Link href={`/login?next=${encodeURIComponent(pathname ?? "/")}`} className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white hover:bg-ink/85">
+            Log in
+          </Link>
+          <Link href="/register" className="rounded-full border border-line px-6 py-3 text-sm font-bold text-ink hover:border-ink">
+            Create an account
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (sent) {
     return (
       <div className="rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
         <FiCheckCircle aria-hidden="true" className="mx-auto h-8 w-8 text-green-700" />
         <p className="mt-3 font-semibold text-ink">Enquiry sent</p>
         <p className="mt-1 text-sm text-muted">
-          {sample ? "This is a sample listing, so nothing was sent. On a real listing the JVA team would contact you within one working day." : "Thanks. The JVA team will contact you within one working day."}
+          Thanks. The JVA team will contact you within one working day.
         </p>
       </div>
     );
@@ -121,6 +148,39 @@ export function EnquiryForm({
         <span className="sr-only">Phone number</span>
         <input required type="tel" value={form.phoneNumber} onChange={set("phoneNumber")} placeholder="Phone number" autoComplete="tel" className={inputClass} />
       </label>
+      {plotOptions ? (
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-semibold text-ink">
+            Which plot size?<span className="ml-0.5 text-gold-deep" aria-hidden="true">*</span>
+          </span>
+          <select
+            required
+            value={plotIndex ?? ""}
+            onChange={(event) => {
+              const index = event.target.value === "" ? null : Number(event.target.value);
+              setPlotIndex(index);
+              setError("");
+              // Name the plot in the message, so the team sees which one the enquiry is about.
+              if (index !== null) {
+                const chosen = plotOptions[index]!;
+                setForm((current) => ({
+                  ...current,
+                  message: `I'm interested in a ${formatSize(chosen.sizeSqm)} plot (${formatNaira(chosen.price)}). ${defaultMessage.replace(/^I'm interested in buying "[^"]*"\.\s*/, "")}`.trim(),
+                }));
+              }
+            }}
+            className={cx(inputClass, "pr-10", plotIndex === null && "text-gray-400")}
+          >
+            <option value="">Choose a plot size</option>
+            {plotOptions.map((option, index) => (
+              <option key={index} value={index}>
+                {formatSize(option.sizeSqm)}: {formatNaira(option.price)}
+                {option.priceNegotiable ? ` (${priceNegotiableLabel[option.priceNegotiable].toLowerCase()})` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <label className="block">
         <span className="sr-only">Message</span>
         <textarea required rows={4} value={form.message} onChange={set("message")} className={inputClass} />
@@ -208,15 +268,15 @@ export function EnquiryForm({
           <dl className="mt-3 space-y-1.5 rounded-lg bg-ivory p-3 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-muted">Asking price</dt>
-              <dd className="font-semibold text-ink tabular-nums">{formatNaira(salePrice)}</dd>
+              <dd className="font-semibold text-ink tabular-nums">{formatNaira(askingPrice!)}</dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-muted">Facilitation fee ({SALE_FEE_RATE * 100}%)</dt>
-              <dd className="font-semibold text-ink tabular-nums">+ {formatNaira(saleFee(salePrice))}</dd>
+              <dd className="font-semibold text-ink tabular-nums">+ {formatNaira(saleFee(askingPrice!))}</dd>
             </div>
             <div className="flex justify-between gap-3 border-t border-line pt-1.5">
               <dt className="font-semibold text-ink">Total you&apos;d pay</dt>
-              <dd className="font-bold text-ink tabular-nums">{formatNaira(salePrice + saleFee(salePrice))}</dd>
+              <dd className="font-bold text-ink tabular-nums">{formatNaira(askingPrice! + saleFee(askingPrice!))}</dd>
             </div>
           </dl>
           <p className="mt-2 text-[0.6875rem] text-muted">Worked out on the asking price. The fee is {SALE_FEE_RATE * 100}% of the final agreed price.</p>
@@ -232,7 +292,6 @@ export function EnquiryForm({
           </label>
         </div>
       ) : null}
-      {sample ? <p className="rounded-lg bg-ivory px-3 py-2 text-xs text-muted">Sample listing: this form works, but nothing is sent.</p> : null}
       <SubmitButton loading={sending} loadingText="Sending…" disabled={(jointVenture || isSale) && !acceptedTerms}>
         {submitLabel}
       </SubmitButton>

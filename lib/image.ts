@@ -1,12 +1,14 @@
 import { stampWatermark } from "@/lib/photoWatermark";
 
-const MAX_EDGE = 1400;
-const QUALITY = 0.78;
+/** Only bigger photos are scaled down; smaller ones keep their size. */
+const MAX_EDGE = 3200;
+/** High enough that the saved photo looks the same as the original. */
+const QUALITY = 0.92;
 
 /**
- * Reads an uploaded photo, stamps the JVA watermark on it and shrinks it to a
- * JPEG data URL no wider or taller than 1400px, so photos stay small enough to send with the form.
- * With a real backend this becomes an upload that returns the stored file URL.
+ * Reads an uploaded photo and stamps the JVA watermark on it, keeping the photo as sharp as the
+ * original: its own size unless it's over 3200px on the longest side (sharper than any screen
+ * shows), and saved as a high-quality JPEG. Returns a data URL; it's uploaded when the form is saved.
  */
 export async function resizeImage(file: File): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error(`${file.name} isn't an image.`);
@@ -18,7 +20,9 @@ export async function resizeImage(file: File): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   await stampWatermark(canvas);
   return canvas.toDataURL("image/jpeg", QUALITY);

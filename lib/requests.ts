@@ -46,6 +46,7 @@ export const partnershipTypes: Option[] = [
   { value: "property_consultant", label: "Property consultant" },
   { value: "building_expert", label: "Building expert" },
 ];
+/** Older requests picked one of these; new ones are typed (e.g. "6 units of apartments"), which labelOf shows as typed. */
 export const housingProposals: Option[] = [
   { value: "apartment", label: "Apartments" },
   { value: "duplex", label: "Duplexes" },
@@ -55,16 +56,19 @@ export const housingProposals: Option[] = [
 ];
 export const titleDocuments: Option[] = [
   { value: "c_of_o", label: "C of O" },
+  { value: "global_c_of_o", label: "Global C of O" },
   { value: "governors_consent", label: "Governor's Consent" },
   { value: "deed_of_assignment", label: "Deed of Assignment" },
   { value: "excision", label: "Excision" },
   { value: "gazzette", label: "Gazette" },
+  { value: "reg_survey", label: "Registered Survey" },
   { value: "any", label: "Any verified title" },
 ];
 export const sharingFormulas: Option[] = [
   { value: "30_70", label: "30% / 70%" },
   { value: "40_60", label: "40% / 60%" },
   { value: "50_50", label: "50% / 50%" },
+  { value: "55_45", label: "55% / 45%" },
   { value: "60_40", label: "60% / 40%" },
   { value: "open", label: "Open to discussion" },
 ];
@@ -240,7 +244,7 @@ export function briefProblem(type: RequestType, brief: Brief): string {
     if (!(Number(brief.sizeMin) > 0) || !(Number(brief.sizeMax) > 0)) return "Add the size range you want, from and to (sqm).";
     if (Number(brief.sizeMax) < Number(brief.sizeMin)) return "The largest size should be bigger than the smallest.";
   }
-  if (type === "jv" && !brief.housingProposal) return "Say what you plan to build.";
+  if (type === "jv" && !brief.housingProposal.trim()) return "Say what you plan to build.";
   if (type === "jv" && !brief.sharingFormula) return "Choose the sharing formula you'd accept.";
   if (type === "jv" && !brief.premiumWanted) return "Say whether you'll pay a premium.";
   if (type === "jv" && brief.premiumWanted === "yes" && !(Number(brief.premium) > 0)) return "Enter the most you'd pay as a premium.";

@@ -9,8 +9,10 @@ import { RootState } from "@/store/store"
 import { getMyAccount, getUserStats } from "@/lib/api/auth"
 import { getMyRequests } from "@/lib/api/requests"
 import { getListings } from "@/lib/api/listings"
-import { getMySubmissions } from "@/lib/api/inbox"
+import { getMyListings } from "@/lib/api/inbox"
+import type { OwnedListing } from "@/lib/api/listings"
 import SubmissionList from "@/components/dashboard/SubmissionList"
+import OwnedListingList from "@/components/dashboard/OwnedListingList"
 import type { ListingSubmission, MemberAccount } from "@/lib/inbox/types"
 import StatCard from "@/components/dashboard/StatCard"
 import SectionCard from "@/components/dashboard/SectionCard"
@@ -54,6 +56,7 @@ export default function Dashboard() {
   const [requests, setRequests] = useState<PartnerRequest[]>([])
   const [listings, setListings] = useState<Listing[] | null>(null)
   const [submissions, setSubmissions] = useState<ListingSubmission[]>([])
+  const [ownedListings, setOwnedListings] = useState<OwnedListing[]>([])
   const [account, setAccount] = useState<MemberAccount | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
@@ -76,14 +79,19 @@ export default function Dashboard() {
       .catch((error) => console.error("Couldn't load the dashboard:", error))
       .finally(() => !cancelled && setIsLoading(false))
 
-    // Listing submissions live in the shared demo inbox; a failure there shouldn't block the rest.
+    // A failure loading the account shouldn't block the rest of the dashboard.
     getMyAccount(user.id, token ?? undefined)
       .then((mine) => !cancelled && setAccount(mine))
       .catch(() => undefined)
 
     if (token) {
-      getMySubmissions(token)
-        .then((mine) => !cancelled && setSubmissions(mine))
+      // Listing requests they sent, and listings the JVA team made with them as the owner.
+      getMyListings(token)
+        .then((mine) => {
+          if (cancelled) return
+          setSubmissions(mine.submissions)
+          setOwnedListings(mine.listings)
+        })
         .catch(() => undefined)
     }
 
@@ -100,6 +108,9 @@ export default function Dashboard() {
   const firstName = fullName.split(" ")[0]
   const initials = fullName.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("")
   const pending = requests.filter((request) => request.status === "pending").length
+  // A listing request that has become one of their listings shows once, as the listing.
+  const madeIntoListings = new Set(ownedListings.map((listing) => listing.sourceSubmissionId).filter(Boolean))
+  const pendingSubmissions = submissions.filter((submission) => !madeIntoListings.has(submission.id))
   const badge = account ? accountBadge[account.status] : null
   const memberSince = account?.createdAt
     ? new Date(account.createdAt).toLocaleDateString("en-GB", { month: "long", year: "numeric" })
@@ -259,9 +270,12 @@ export default function Dashboard() {
           </SectionCard>
         </div>
 
-        <SectionCard title="My property listings" subtitle="Properties you've submitted, and their review status." action={{ label: "List a property", href: "/listings/submit" }}>
-          {submissions.length ? (
-            <SubmissionList submissions={submissions} />
+        <SectionCard title="My property listings" subtitle="Your listings on the platform, and properties you've submitted for review." action={{ label: "List a property", href: "/listings/submit" }}>
+          {ownedListings.length || pendingSubmissions.length ? (
+            <div className="space-y-4">
+              {ownedListings.length ? <OwnedListingList listings={ownedListings} /> : null}
+              {pendingSubmissions.length ? <SubmissionList submissions={pendingSubmissions} /> : null}
+            </div>
           ) : (
             <EmptyState
               icon={<FiHome aria-hidden="true" className="h-5 w-5" />}

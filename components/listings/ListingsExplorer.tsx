@@ -162,7 +162,7 @@ export function ListingsExplorer() {
         </div>
       </div>
 
-      {fetchError ? <Alert tone="error" className="mt-6">{fetchError} Showing demo listings instead.</Alert> : null}
+      {fetchError ? <Alert tone="error" className="mt-6">{fetchError}</Alert> : null}
 
       <div className="mt-6 flex min-h-8 flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted" aria-live="polite">

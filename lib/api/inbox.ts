@@ -1,7 +1,8 @@
 import { API_TIMEOUT_MS, fetchFailure, reportUnauthorized } from "@/lib/api/session";
 import { uploadFile } from "@/lib/api/auth";
 import type { ListingSubmission, NewEnquiry, SubmittedDocument } from "@/lib/inbox/types";
-import { joinMedia, splitMedia } from "@/lib/videoWatermark";
+import { fileExtension, joinMedia, splitMedia } from "@/lib/videoWatermark";
+import { toOwnedListing, type OwnedListing } from "@/lib/api/listings";
 
 // ── Listing submissions → real FastAPI backend ──────────────────────────────
 
@@ -43,6 +44,8 @@ export type SubmissionInput = {
     videos?: string[];
     jv?: { sharingFormula: string; sharingNegotiable?: boolean; premium?: number; proposal: string; duration: string };
     saleTerms?: { acceptedFeeTerms: true; feeRate: number };
+    /** Joint ventures: land value to be determined (price is then 0). */
+    landValueTbd?: boolean;
     priceNegotiable?: "negotiable" | "slightly_negotiable" | "fixed";
     ownerName: string;
   };
@@ -57,7 +60,7 @@ async function uploadDataUrl(dataUrl: string, filename: string, token: string): 
   if (!dataUrl.startsWith("data:") && !dataUrl.startsWith("blob:")) return dataUrl;
   const res = await fetch(dataUrl);
   const blob = await res.blob();
-  const ext = blob.type.split(";")[0]!.split("/")[1] || "jpg";
+  const ext = fileExtension(blob.type, "jpg");
   const name = filename.includes(".") ? filename : `${filename}.${ext}`;
   return uploadFile(new File([blob], name, { type: blob.type }), token);
 }
@@ -120,54 +123,46 @@ export function deleteSubmission(id: string, token: string): Promise<unknown> {
   return call(`/listings/submit/${encodeURIComponent(id)}`, { method: "DELETE" }, token);
 }
 
-/** GET /listings/my-submissions */
+/** GET /listings/my-submissions: the member's own listing requests (drafts included). */
 export async function getMySubmissions(token: string): Promise<ListingSubmission[]> {
-  const data = await call<{ submissions: ListingSubmission[] }>("/listings/my-submissions", undefined, token);
-  return data.submissions;
+  return (await getMyListings(token)).submissions;
 }
 
-// ── Enquiries → demo inbox (listings are still seed data) ───────────────────
+/**
+ * GET /listings/my-submissions, both halves: `submissions` are the listing requests the member
+ * sent; `listings` are listings the JVA team created with the member as owner (their `userId`).
+ */
+export async function getMyListings(token: string): Promise<{ submissions: ListingSubmission[]; listings: OwnedListing[] }> {
+  const data = await call<{ submissions?: ListingSubmission[]; listings?: Parameters<typeof toOwnedListing>[0][] }>("/listings/my-submissions", undefined, token);
+  return { submissions: data.submissions ?? [], listings: (data.listings ?? []).map(toOwnedListing) };
+}
+
+// ── Enquiries ───────────────────────────────────────────────────────────────
 
 /**
- * Sends an enquiry about a listing or a member's request. The server has no
- * enquiries endpoint yet, so it goes through POST /contact with the details
- * attached; the JVA team receives it with the other contact messages.
- * TODO(backend): switch to a dedicated enquiries endpoint when there is one.
+ * POST /enquiries: an enquiry about a listing or a member's request. The server
+ * only takes enquiries from signed-in members. A JV letterhead is uploaded
+ * first and sent as its URL.
  */
 export async function sendEnquiry(input: Omit<NewEnquiry, "kind">, token?: string | null): Promise<void> {
-  let letterheadUrl: string | undefined;
-  if (input.jv?.letterhead) {
-    if (!token) throw new Error("Please log in to upload your letterhead, so we can prepare your LOI on it.");
-    letterheadUrl = await uploadDataUrl(input.jv.letterhead.url, input.jv.letterhead.name, token);
-  }
-  const about = `${input.target.type === "listing" ? "Listing" : "Request"}: ${input.target.title} (${input.target.id})`;
-  const jvLines = input.jv
-    ? [
-        `Wants JVA to prepare their LOI: ${input.jv.generateLoi ? "Yes" : "No"}`,
-        letterheadUrl ? `Letterhead: ${letterheadUrl}` : "",
-        "Accepted the facilitation fee terms (10% of land value, non-negotiable): Yes",
-      ].filter(Boolean)
-    : [];
-  const saleLines = input.sale
-    ? [
-        `Accepted the facilitation fee terms (${input.sale.feeRate * 100}% of the agreed price, paid on top of the price): Yes`,
-        `Asking price: ₦${input.sale.askingPrice.toLocaleString("en-NG")}`,
-      ]
-    : [];
+  if (!token) throw new Error("Please log in to send an enquiry.");
+  const letterhead = input.jv?.letterhead
+    ? { ...input.jv.letterhead, url: await uploadDataUrl(input.jv.letterhead.url, input.jv.letterhead.name, token) }
+    : undefined;
   await call(
-    "/contact",
+    "/enquiries",
     {
       method: "POST",
       body: JSON.stringify({
+        target: input.target,
         fullName: input.fullName,
-        emailAddress: input.email,
+        email: input.email,
         phoneNumber: input.phoneNumber,
-        consultationType: input.target.type === "listing" ? "Listing enquiry" : "Request enquiry",
-        subject: `Enquiry: ${input.target.title}`,
-        message: [input.message, "", about, ...jvLines, ...saleLines].join("\n"),
-        enquiry: { target: input.target, sale: input.sale, jv: input.jv ? { ...input.jv, letterhead: letterheadUrl ? { ...input.jv.letterhead, url: letterheadUrl } : undefined } : undefined },
+        message: input.message,
+        jv: input.jv ? { ...input.jv, letterhead } : undefined,
+        sale: input.sale,
       }),
     },
-    token ?? undefined,
+    token,
   );
 }
