@@ -20,7 +20,7 @@ import type { ListingSubmission, SubmittedDocument } from "@/lib/inbox/types";
 import type { DealType, PriceNegotiable, PropertyType } from "@/types";
 import { TitleDocumentPicker } from "@/components/listings/TitleDocumentPicker";
 import { PlotOptionsFields } from "@/components/listings/PlotOptionsFields";
-import { isEstate, plotOptionsFrom, plotRowsFrom, plotRowsProblem } from "@/components/listings/labels";
+import { isEstate, plotOptionsFrom, plotRowsFrom, plotRowsProblem, readPlotOptions } from "@/components/listings/labels";
 
 const MAX_PHOTOS = 8;
 const MAX_DOCUMENTS = 6;
@@ -103,9 +103,8 @@ function formFromSubmission(submission: ListingSubmission): FormState {
     sizeSqm: listing.sizeSqm ? String(listing.sizeSqm) : "",
     price: listing.price ? String(listing.price) : "",
     landValueTbd: Boolean(listing.landValueTbd),
-    // TODO(backend): plotOptions only arrive once the server stores them.
-    isEstate: isEstate(listing),
-    plotRows: plotRowsFrom(listing.plotOptions),
+    isEstate: isEstate({ plotOptions: readPlotOptions(listing.plotOptions) }),
+    plotRows: plotRowsFrom(readPlotOptions(listing.plotOptions)),
     sharingFormula: listing.jv?.sharingFormula ?? emptyForm.sharingFormula,
     sharingNegotiable: booleanAnswer(listing.jv?.sharingNegotiable),
     hasPremium: premiumAnswer(listing.jv?.premium),
@@ -254,8 +253,9 @@ export function SubmitListingForm() {
     },
   });
 
-  // Estates: cheapest plot first. TODO(backend): send the whole list as `plotOptions` once the server stores it.
-  const cheapestPlot = form.dealType === "sale" && form.isEstate ? plotOptionsFrom(form.plotRows)[0] : undefined;
+  // Estates: every plot, cheapest first; the cheapest also fills the usual size, price and negotiable fields.
+  const plots = form.dealType === "sale" && form.isEstate ? plotOptionsFrom(form.plotRows) : [];
+  const cheapestPlot = plots[0];
 
   const toInput = (): SubmissionInput => ({
     isOwner: form.isOwner,
@@ -271,6 +271,7 @@ export function SubmitListingForm() {
       sizeSqm: cheapestPlot ? cheapestPlot.sizeSqm : Number(form.sizeSqm) || 0,
       price: cheapestPlot ? cheapestPlot.price : form.dealType === "jv" && form.landValueTbd ? 0 : Number(form.price) || 0,
       landValueTbd: form.dealType === "jv" && form.landValueTbd ? true : undefined,
+      plotOptions: plots,
       titleDocument: form.titleDocument,
       description: form.description.trim(),
       highlights: form.highlights.split("\n").map((line) => line.trim()).filter(Boolean),

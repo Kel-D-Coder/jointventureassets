@@ -15,6 +15,7 @@ import { SHARING_TBD, isEstate, priceNegotiableLabel, priceText, propertyTypeLab
 import { formatNaira, formatSize, premiumText } from "@/lib/format";
 import type { Listing } from "@/types";
 import { coverOf, joinMedia } from "@/lib/videoWatermark";
+import { RecordListingView } from "@/components/listings/RecordListingView";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -106,6 +107,7 @@ export default async function ListingDetailPage({ params }: Props) {
 
         <div className="mt-8">
           <ListingGallery images={joinMedia(listing.images, listing.videos)} title={listing.title} />
+          <RecordListingView listingId={listing.id} />
         </div>
 
         <div className="mt-12 grid gap-12 lg:grid-cols-[1fr_24rem]">

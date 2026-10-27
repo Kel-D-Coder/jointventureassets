@@ -1,6 +1,7 @@
 import { API_TIMEOUT_MS, fetchFailure, reportUnauthorized } from "@/lib/api/session";
 import { uploadFile } from "@/lib/api/auth";
 import type { ListingSubmission, NewEnquiry, SubmittedDocument } from "@/lib/inbox/types";
+import type { PlotOption } from "@/types";
 import { fileExtension, joinMedia, splitMedia } from "@/lib/videoWatermark";
 import { toOwnedListing, type OwnedListing } from "@/lib/api/listings";
 
@@ -46,6 +47,8 @@ export type SubmissionInput = {
     saleTerms?: { acceptedFeeTerms: true; feeRate: number };
     /** Joint ventures: land value to be determined (price is then 0). */
     landValueTbd?: boolean;
+    /** Estates: the plot sizes, cheapest first. */
+    plotOptions?: PlotOption[];
     priceNegotiable?: "negotiable" | "slightly_negotiable" | "fixed";
     ownerName: string;
   };

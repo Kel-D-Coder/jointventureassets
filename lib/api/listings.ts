@@ -1,8 +1,8 @@
 import { API_TIMEOUT_MS, fetchFailure } from "@/lib/api/session";
-import type { DealType, Listing, PropertyType } from "@/types";
+import type { DealType, Listing, PlotOption, PropertyType } from "@/types";
 import type { ListingSubmission } from "@/lib/inbox/types";
 import { coverOf, joinMedia, splitMedia } from "@/lib/videoWatermark";
-import { isLandValueTbd } from "@/components/listings/labels";
+import { isLandValueTbd, readPlotOptions } from "@/components/listings/labels";
 
 const BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? "";
 
@@ -101,6 +101,8 @@ export interface OwnedListing {
   status: "draft" | "published" | "under_offer" | "closed";
   /** Joint ventures whose land value is still to be determined. */
   landValueTbd: boolean;
+  /** Estates: the plot sizes, cheapest first. */
+  plotOptions?: PlotOption[];
   /** The member's listing request it was made from, if any. */
   sourceSubmissionId?: string;
   createdAt: string;
@@ -120,6 +122,7 @@ export function toOwnedListing(raw: Partial<Listing> & ListingExtras & { id?: st
     cover: coverOf(raw.images ?? []),
     status,
     landValueTbd: isLandValueTbd({ dealType: (raw.dealType ?? "sale") as DealType, price: Number(raw.price) || 0, landValueTbd: raw.landValueTbd, status }),
+    plotOptions: readPlotOptions(raw.plotOptions),
     sourceSubmissionId: raw.sourceSubmissionId ?? undefined,
     createdAt: raw.createdAt ?? new Date(0).toISOString(),
   };
@@ -148,6 +151,7 @@ function toPublicListing(raw: ServerListing): Listing | null {
       jv: l.jv ?? undefined,
       priceNegotiable: l.dealType === "sale" ? l.priceNegotiable : undefined,
       landValueTbd: l.dealType === "jv" ? Boolean(l.landValueTbd) : undefined,
+      plotOptions: readPlotOptions(l.plotOptions),
       ownerName: l.ownerName,
       status: l.underOffer ? "under_offer" : "published",
       featured: Boolean(l.featured),
@@ -178,6 +182,7 @@ function toPublicListing(raw: ServerListing): Listing | null {
     jv: raw.jv ?? undefined,
     priceNegotiable: raw.dealType === "sale" ? raw.priceNegotiable : undefined,
     landValueTbd: raw.dealType === "jv" ? Boolean(raw.landValueTbd) : undefined,
+    plotOptions: readPlotOptions(raw.plotOptions),
     ownerName: raw.ownerName ?? "Joint Venture Assets",
     status,
     featured: Boolean(raw.featured),
@@ -200,4 +205,20 @@ export async function getApprovedListings(): Promise<Listing[]> {
   if (!response.ok) throw new Error(`Server error ${response.status}`);
   const body = (await response.json()) as { listings?: ServerListing[] };
   return (body.listings ?? []).map(toPublicListing).filter((listing): listing is Listing => listing !== null);
+}
+
+/**
+ * POST /listings/{id}/view: records one visit to a listing, with the member if they're signed in
+ * (the server ignores admin visits). Never throws: a missed view must not break the page.
+ */
+export async function recordListingView(id: string, token?: string | null): Promise<void> {
+  try {
+    await fetch(`${BASE}/listings/${encodeURIComponent(id)}/view`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    });
+  } catch {
+    // Offline, or the server is asleep: the view just isn't counted.
+  }
 }

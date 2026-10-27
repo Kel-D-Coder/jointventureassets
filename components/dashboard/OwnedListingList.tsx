@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { FiArrowRight, FiCheckCircle, FiClock, FiHome, FiLock, FiTag } from "react-icons/fi";
-import { formatNairaShort } from "@/lib/format";
-import { dealTypeLabel } from "@/components/listings/labels";
+import { dealTypeLabel, priceText } from "@/components/listings/labels";
 import type { OwnedListing } from "@/lib/api/listings";
 
 const statusStyle: Record<OwnedListing["status"], { label: string; className: string; icon: typeof FiClock }> = {
@@ -40,7 +39,7 @@ export default function OwnedListingList({ listings }: { listings: OwnedListing[
               </div>
               <p className="mt-1.5 truncate font-semibold text-ink">{listing.title}</p>
               <p className="mt-0.5 truncate text-sm text-muted">
-                {[[listing.area, listing.city].filter(Boolean).join(", "), listing.landValueTbd ? "Land value TBD" : listing.price ? formatNairaShort(listing.price) : ""].filter(Boolean).join(" · ")}
+                {[[listing.area, listing.city].filter(Boolean).join(", "), listing.landValueTbd ? "Land value TBD" : listing.price ? priceText(listing, true) : ""].filter(Boolean).join(" · ")}
               </p>
               <p className="mt-1 text-[0.6875rem] font-semibold tracking-wide text-gold-deep uppercase">Listed for you by JVA</p>
               {live ? (
