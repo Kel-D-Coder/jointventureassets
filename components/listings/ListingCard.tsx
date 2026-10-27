@@ -39,9 +39,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
         <h3 className="mt-2 font-display text-2xl leading-snug text-ink">{listing.title}</h3>
 
         <div className="mt-3 mb-5 flex flex-wrap gap-2 text-xs font-medium text-muted">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-ivory px-2.5 py-1">
-            <FiMaximize aria-hidden="true" /> {sizeText(listing)}
-          </span>
+          {sizeText(listing) ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-ivory px-2.5 py-1">
+              <FiMaximize aria-hidden="true" /> {sizeText(listing)}
+            </span>
+          ) : null}
           {isEstate(listing) ? <span className="rounded-full bg-gold-soft/70 px-2.5 py-1 font-semibold text-gold-deep">{listing.plotOptions!.length} plot sizes</span> : null}
           <span className="rounded-full bg-ivory px-2.5 py-1">{propertyTypeLabel[listing.propertyType]}</span>
           <span className="rounded-full bg-ivory px-2.5 py-1">{listing.titleDocument}</span>

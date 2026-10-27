@@ -73,7 +73,8 @@ function validate(form: FormState, images: string[], documents: SubmittedDocumen
     const problem = plotRowsProblem(form.plotRows);
     if (problem) errors.plotOptions = problem;
   }
-  if (!estate && !(Number(form.sizeSqm) > 0)) errors.sizeSqm = "Enter the size in square metres.";
+  // Size is required for a joint venture, optional for a sale.
+  if (!estate && form.dealType === "jv" && !(Number(form.sizeSqm) > 0)) errors.sizeSqm = "Enter the size in square metres.";
   if (!estate && !(Number(form.price) > 0) && !(form.dealType === "jv" && form.landValueTbd)) errors.price = form.dealType === "jv" ? "Enter the land value, or tick TBD." : "Enter an amount in naira.";
   if (form.dealType === "jv" && form.sharingFormula !== SHARING_TBD && !form.sharingNegotiable) errors.sharingNegotiable = "Choose negotiable or fixed.";
   if (form.dealType === "jv" && !form.hasPremium) errors.hasPremium = "Choose yes or no.";
@@ -501,7 +502,7 @@ export function SubmitListingForm() {
             </div>
           ) : (
             <>
-          <Field label="Size (sqm)" htmlFor="sizeSqm" required error={errors.sizeSqm} hint="1 hectare = 10,000 sqm">
+          <Field label="Size (sqm)" htmlFor="sizeSqm" required={form.dealType === "jv"} error={errors.sizeSqm} hint={form.dealType === "sale" ? "Optional for a sale. 1 hectare = 10,000 sqm" : "1 hectare = 10,000 sqm"}>
             <input id="sizeSqm" inputMode="numeric" value={form.sizeSqm} onChange={digits("sizeSqm")} className={inputClass} />
           </Field>
           <Field label={form.dealType === "jv" ? "Land value (₦)" : "Asking price (₦)"} htmlFor="price" required error={errors.price}>

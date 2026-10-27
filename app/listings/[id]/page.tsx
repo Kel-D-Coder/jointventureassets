@@ -46,7 +46,7 @@ export default async function ListingDetailPage({ params }: Props) {
     .slice(0, 3);
   const facts = [
     { label: listing.dealType === "jv" ? "Land value" : "Asking price", value: priceText(listing) },
-    { label: isEstate(listing) ? "Plot sizes" : "Size", value: sizeText(listing) },
+    { label: isEstate(listing) ? "Plot sizes" : "Size", value: sizeText(listing) || "Not stated" },
     { label: "Property type", value: propertyTypeLabel[listing.propertyType] },
     { label: splitTitles(listing.titleDocument).length > 1 ? "Title documents" : "Title document", value: listing.titleDocument },
   ];
