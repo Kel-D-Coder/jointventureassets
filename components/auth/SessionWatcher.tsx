@@ -4,13 +4,14 @@ import { useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { logout } from "@/store/authSlice";
-import { SESSION_EXPIRED_EVENT } from "@/lib/api/session";
+import { ACCOUNT_SUSPENDED_EVENT, SESSION_EXPIRED_EVENT } from "@/lib/api/session";
 import { tokenExpiresAt } from "@/utils/decodeToken";
 
 /**
  * Signs the member out and sends them to the login page when their session ends:
  * when the token's expiry time passes (even mid-visit), or when the server
  * rejects the token. After logging in again they return to the page they were on.
+ * If an admin suspends the account, they're signed out and the login page says why.
  */
 export function SessionWatcher() {
   const token = useAppSelector((state) => state.auth.token);
@@ -51,6 +52,17 @@ export function SessionWatcher() {
     window.addEventListener(SESSION_EXPIRED_EVENT, expire);
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, expire);
   }, [token, expire]);
+
+  // The server said the account is suspended: sign out, with no way back in until it's reactivated.
+  useEffect(() => {
+    if (!token) return;
+    const suspended = () => {
+      dispatch(logout());
+      router.replace("/login?suspended=1");
+    };
+    window.addEventListener(ACCOUNT_SUSPENDED_EVENT, suspended);
+    return () => window.removeEventListener(ACCOUNT_SUSPENDED_EVENT, suspended);
+  }, [token, dispatch, router]);
 
   return null;
 }

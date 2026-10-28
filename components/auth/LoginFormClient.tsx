@@ -12,12 +12,15 @@ import { AppDispatch } from "@/store/store";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { GoogleButton } from "@/components/auth/GoogleBtn";
 import { Alert, Field, PasswordInput, SubmitButton, inputClass } from "@/components/ui/form";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 export default function LoginFormClient() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const params = useSearchParams();
   const expired = params.get("expired") === "1";
+  // Signed out because an admin suspended the account.
+  const suspended = params.get("suspended") === "1";
   // Back to the page they were on when the session ended; only paths on this site.
   const next = params.get("next");
   const destination = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
@@ -76,7 +79,16 @@ export default function LoginFormClient() {
           <PasswordInput id="password" name="password" autoComplete="current-password" value={formData.password} onChange={handleChange} required />
         </Field>
 
-        {expired && !error ? <Alert tone="info">Your session has expired. Please log in again.</Alert> : null}
+        {suspended && !error ? (
+          <Alert tone="error">
+            Your account has been suspended, so you&apos;ve been signed out. Please contact{" "}
+            <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold underline">
+              {CONTACT_EMAIL}
+            </a>{" "}
+            to resolve it.
+          </Alert>
+        ) : null}
+        {expired && !suspended && !error ? <Alert tone="info">Your session has expired. Please log in again.</Alert> : null}
         {error ? <Alert tone="error">{error}</Alert> : null}
 
         <SubmitButton loading={loading} loadingText="Logging in…">
