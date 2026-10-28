@@ -31,13 +31,7 @@ export function PlotOptionsFields({ rows, onChange, error }: { rows: PlotRow[]; 
           >
             <label className="block">
               <span className="mb-1 block text-xs font-semibold text-ink md:sr-only">Plot size (sqm)</span>
-              <input
-                inputMode="numeric"
-                value={row.sizeSqm}
-                onChange={(e) => update(index, { sizeSqm: e.target.value.replace(/[^\d]/g, "") })}
-                placeholder="e.g. 500"
-                className={inputClass}
-              />
+              <MoneyInput value={row.sizeSqm} onChange={(digits) => update(index, { sizeSqm: digits })} placeholder="e.g. 500" />
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-semibold text-ink md:sr-only">Price (₦)</span>

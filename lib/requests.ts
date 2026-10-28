@@ -29,6 +29,9 @@ export const jvPropertyKinds: Option[] = [
   { value: "land", label: "Land" },
   { value: "building", label: "A building to redevelop" },
 ];
+/** "When do you need it?": the same choices as the buyer profile's "When do you want to buy?". */
+export const requestTimelines = ["Immediately", "Within 3 months", "Within 6 months", "Within a year", "Just looking"];
+
 export const propertiesWanted: Option[] = [
   { value: "residential", label: "Residential" },
   { value: "commercial", label: "Commercial" },

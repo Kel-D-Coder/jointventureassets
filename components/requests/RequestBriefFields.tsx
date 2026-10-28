@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent } from "react";
+import { useEffect, type ChangeEvent } from "react";
 import { FiSearch } from "react-icons/fi";
 import { Field, MoneyInput, Select, YesNo, inputClass } from "@/components/ui/form";
 import {
@@ -8,6 +8,7 @@ import {
   jvPropertyKinds,
   partnershipTypes,
   paymentMethods,
+  requestTimelines,
   propertiesWanted,
   requestSummary,
   sharingFormulas,
@@ -22,6 +23,12 @@ import type { RequestType } from "@/types";
 export function RequestBriefFields({ type, value, onChange }: { type: RequestType; value: Brief; onChange: (next: Brief) => void }) {
   const set = <K extends keyof Brief>(key: K, next: Brief[K]) => onChange({ ...value, [key]: next });
   const text = (key: keyof Brief) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => set(key, event.target.value as never);
+
+  // A joint venture is on land unless they choose a building, so the choice starts on "Land".
+  useEffect(() => {
+    if (type === "jv" && !value.propertyWanted) set("propertyWanted", "land");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, value.propertyWanted]);
   const summary = requestSummary({
     requestType: type,
     location: value.location,
@@ -38,7 +45,7 @@ export function RequestBriefFields({ type, value, onChange }: { type: RequestTyp
     <div className="grid gap-5 sm:grid-cols-2">
       {type === "jv" ? (
         <Field label="What kind of joint venture?" htmlFor="propertyWanted" required>
-          <Select id="propertyWanted" value={value.propertyWanted} onChange={text("propertyWanted")} options={jvPropertyKinds} placeholder="Land or a building" />
+          <Select id="propertyWanted" value={value.propertyWanted || "land"} onChange={text("propertyWanted")} options={jvPropertyKinds} />
         </Field>
       ) : null}
       {type === "purchase" ? (
@@ -127,7 +134,14 @@ export function RequestBriefFields({ type, value, onChange }: { type: RequestTyp
       ) : null}
 
       <Field label="When do you need it?" htmlFor="timeline" required >
-        <input id="timeline" value={value.timeline} onChange={text("timeline")} className={inputClass} placeholder="e.g. within 3 months" />
+        <Select
+          id="timeline"
+          value={value.timeline}
+          onChange={text("timeline")}
+          // Older requests typed their own timeline; keep it as a choice so it isn't lost when editing.
+          options={value.timeline && !requestTimelines.includes(value.timeline) ? [value.timeline, ...requestTimelines] : requestTimelines}
+          placeholder="Choose a timeline"
+        />
       </Field>
 
       <div className="rounded-xl border border-gold/30 bg-gold-soft/40 p-4 sm:col-span-2" aria-live="polite">

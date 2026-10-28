@@ -13,7 +13,7 @@ import { resizeImage } from "@/lib/image";
 import { VIDEO_LIMITS, discardVideo, isVideoUrl, joinMedia, photosThenVideo, prepareVideo, splitMedia } from "@/lib/videoWatermark";
 import { MAX_DOCUMENT_MB, fileSize, toDocument } from "@/lib/files";
 import { cx, formatNaira } from "@/lib/format";
-import { SALE_FEE_RATE, saleFee } from "@/lib/fees";
+import { MIN_ESTATE_FEE_PERCENT, SALE_FEE_RATE, estateFeeProblem, percentDigits, saleFee } from "@/lib/fees";
 import { Alert, Field, MoneyInput, Select, SubmitButton, YesNo, booleanAnswer, inputClass, premiumAnswer, type YesNoValue } from "@/components/ui/form";
 import { dealTypeLabel, priceNegotiableLabel, priceNegotiableOptions, propertyTypeLabel, documentsToUpload, listInWords, sharingFormulaOptions, splitTitles, SHARING_TBD } from "@/components/listings/labels";
 import type { ListingSubmission, SubmittedDocument } from "@/lib/inbox/types";
@@ -36,6 +36,8 @@ const emptyForm = {
   landValueTbd: false,
   /** Sale listings: an estate with several plot sizes, each with its own price. */
   isEstate: false,
+  /** Estates: the facilitation fee to JVA, as a percentage (at least 5). */
+  estateFeePercent: "",
   plotRows: plotRowsFrom(),
   sharingFormula: "40/60",
   sharingNegotiable: "" as YesNoValue,
@@ -72,6 +74,8 @@ function validate(form: FormState, images: string[], documents: SubmittedDocumen
   if (estate) {
     const problem = plotRowsProblem(form.plotRows);
     if (problem) errors.plotOptions = problem;
+    const feeProblem = estateFeeProblem(form.estateFeePercent);
+    if (feeProblem) errors.estateFeePercent = feeProblem;
   }
   // Size is required for a joint venture, optional for a sale.
   if (!estate && form.dealType === "jv" && !(Number(form.sizeSqm) > 0)) errors.sizeSqm = "Enter the size in square metres.";
@@ -105,6 +109,7 @@ function formFromSubmission(submission: ListingSubmission): FormState {
     price: listing.price ? String(listing.price) : "",
     landValueTbd: Boolean(listing.landValueTbd),
     isEstate: isEstate({ plotOptions: readPlotOptions(listing.plotOptions) }),
+    estateFeePercent: isEstate({ plotOptions: readPlotOptions(listing.plotOptions) }) && listing.saleTerms?.feeRate ? String(Math.round(listing.saleTerms.feeRate * 10000) / 100) : "",
     plotRows: plotRowsFrom(readPlotOptions(listing.plotOptions)),
     sharingFormula: listing.jv?.sharingFormula ?? emptyForm.sharingFormula,
     sharingNegotiable: booleanAnswer(listing.jv?.sharingNegotiable),
@@ -178,7 +183,6 @@ export function SubmitListingForm() {
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((current) => ({ ...current, [key]: value }));
   const onText = (key: keyof FormState) => (event: { target: { value: string } }) => set(key, event.target.value as never);
-  const digits = (key: "sizeSqm") => (event: { target: { value: string } }) => set(key, event.target.value.replace(/[^\d]/g, ""));
 
   /** Photos (up to MAX_PHOTOS, watermarked as they're added) and at most one video, uploaded as it is. */
   const addPhotos = async (files: FileList | null) => {
@@ -257,6 +261,8 @@ export function SubmitListingForm() {
   // Estates: every plot, cheapest first; the cheapest also fills the usual size, price and negotiable fields.
   const plots = form.dealType === "sale" && form.isEstate ? plotOptionsFrom(form.plotRows) : [];
   const cheapestPlot = plots[0];
+  // The seller's fee: an estate's own percentage once it's valid, otherwise the standard rate.
+  const sellerFeeRate = form.dealType === "sale" && form.isEstate && !estateFeeProblem(form.estateFeePercent) ? Number(form.estateFeePercent) / 100 : SALE_FEE_RATE;
 
   const toInput = (): SubmissionInput => ({
     isOwner: form.isOwner,
@@ -289,7 +295,7 @@ export function SubmitListingForm() {
             }
           : undefined,
       priceNegotiable: cheapestPlot ? cheapestPlot.priceNegotiable : form.dealType === "sale" && form.priceNegotiable ? form.priceNegotiable : undefined,
-      saleTerms: form.dealType === "sale" && form.acceptedSaleFee ? { acceptedFeeTerms: true, feeRate: SALE_FEE_RATE } : undefined,
+      saleTerms: form.dealType === "sale" && form.acceptedSaleFee ? { acceptedFeeTerms: true, feeRate: sellerFeeRate } : undefined,
       ownerName: form.isOwner ? form.fullName.trim() : form.ownerName.trim(),
     },
   });
@@ -499,11 +505,28 @@ export function SubmitListingForm() {
           {form.dealType === "sale" && form.isEstate ? (
             <div className="sm:col-span-2">
               <PlotOptionsFields rows={form.plotRows} onChange={(rows) => set("plotRows", rows)} error={errors.plotOptions} />
+              <Field
+                label="Facilitation fee to JVA (%)"
+                htmlFor="estateFeePercent"
+                required
+                error={errors.estateFeePercent}
+                hint={`At least ${MIN_ESTATE_FEE_PERCENT}%. Paid to JVA from each plot's sale price when it sells.`}
+                className="mt-5 sm:max-w-xs"
+              >
+                <input
+                  id="estateFeePercent"
+                  inputMode="decimal"
+                  value={form.estateFeePercent}
+                  onChange={(e) => set("estateFeePercent", percentDigits(e.target.value))}
+                  placeholder="e.g. 5"
+                  className={inputClass}
+                />
+              </Field>
             </div>
           ) : (
             <>
           <Field label="Size (sqm)" htmlFor="sizeSqm" required={form.dealType === "jv"} error={errors.sizeSqm} hint={form.dealType === "sale" ? "Optional for a sale. 1 hectare = 10,000 sqm" : "1 hectare = 10,000 sqm"}>
-            <input id="sizeSqm" inputMode="numeric" value={form.sizeSqm} onChange={digits("sizeSqm")} className={inputClass} />
+            <MoneyInput id="sizeSqm" value={form.sizeSqm} onChange={(value) => set("sizeSqm", value)} placeholder="e.g. 1,000" />
           </Field>
           <Field label={form.dealType === "jv" ? "Land value (₦)" : "Asking price (₦)"} htmlFor="price" required error={errors.price}>
             <MoneyInput
@@ -562,7 +585,7 @@ export function SubmitListingForm() {
           </fieldset>
         ) : null}
 
-        {form.dealType === "sale" ? <SellerFee price={cheapestPlot ? cheapestPlot.price : Number(form.price) || 0} /> : null}
+        {form.dealType === "sale" ? <SellerFee price={cheapestPlot ? cheapestPlot.price : Number(form.price) || 0} rate={sellerFeeRate} /> : null}
 
         {form.dealType === "jv" ? (
           <div className="mt-6 grid gap-5 rounded-2xl bg-ivory p-5 sm:grid-cols-2">
@@ -783,7 +806,7 @@ export function SubmitListingForm() {
           <p className="text-sm font-semibold text-ink">Facilitation fee terms</p>
           <p className="mt-1 text-sm text-muted">
             When your property sells through Joint Venture Assets, you pay a facilitation fee of{" "}
-            <strong className="text-ink">{SALE_FEE_RATE * 100}% of the agreed sale price</strong>, taken from the proceeds.
+            <strong className="text-ink">{Math.round(sellerFeeRate * 10000) / 100}% of the agreed sale price</strong>, taken from the proceeds.
             {Number(form.price) > 0 ? ` On your asking price that's ${formatNaira(saleFee(Number(form.price)))}.` : ""}
           </p>
           <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-ink">
@@ -793,7 +816,7 @@ export function SubmitListingForm() {
               onChange={(event) => set("acceptedSaleFee", event.target.checked)}
               className="mt-0.5 h-4 w-4 shrink-0 accent-[#c9a24a]"
             />
-            I agree to pay the {SALE_FEE_RATE * 100}% facilitation fee from the sale price when my property sells.
+            I agree to pay the {Math.round(sellerFeeRate * 10000) / 100}% facilitation fee from the sale price when my property sells.
           </label>
           {errors.acceptedSaleFee ? <p className="mt-1.5 text-xs font-medium text-red-700">{errors.acceptedSaleFee}</p> : null}
         </div>
@@ -916,8 +939,9 @@ function DropZone({
 }
 
 /** What the seller would receive: the asking price less JVA's facilitation fee. */
-export function SellerFee({ price }: { price: number }) {
-  const fee = saleFee(price);
+export function SellerFee({ price, rate = SALE_FEE_RATE }: { price: number; rate?: number }) {
+  const fee = Math.round(price * rate);
+  const percent = Math.round(rate * 10000) / 100;
   return (
     <div className="mt-6 rounded-2xl bg-ivory p-5">
       <p className="eyebrow text-gold-deep">What you&apos;d receive</p>
@@ -927,7 +951,7 @@ export function SellerFee({ price }: { price: number }) {
           <dd className="font-semibold text-ink tabular-nums">{price ? formatNaira(price) : "Enter a price"}</dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt className="text-muted">JVA facilitation fee ({SALE_FEE_RATE * 100}%)</dt>
+          <dt className="text-muted">JVA facilitation fee ({percent}%)</dt>
           <dd className="font-semibold text-ink tabular-nums">{price ? `- ${formatNaira(fee)}` : ""}</dd>
         </div>
         <div className="flex justify-between gap-3 border-t border-line pt-1.5">
@@ -936,7 +960,7 @@ export function SellerFee({ price }: { price: number }) {
         </div>
       </dl>
       <p className="mt-2 text-xs text-muted">
-        Worked out on your asking price. The fee is {SALE_FEE_RATE * 100}% of the final agreed price, paid from the proceeds when the sale completes.
+        Worked out on your asking price. The fee is {percent}% of the final agreed price, paid from the proceeds when the sale completes.
       </p>
     </div>
   );

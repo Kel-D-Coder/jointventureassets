@@ -2,6 +2,7 @@
 
 import { Field, Select, inputClass } from "@/components/ui/form";
 import { cx } from "@/lib/format";
+import { requestTimelines } from "@/lib/requests";
 
 export interface ProfileFieldSpec {
   name: string;
@@ -132,7 +133,7 @@ export function buyerFields(category: string): ProfileFieldSpec[] {
       name: "timeline",
       label: "When do you want to buy?",
       kind: "select",
-      options: ["Immediately", "Within 3 months", "Within 6 months", "Within a year", "Just looking"],
+      options: requestTimelines,
       required: true,
     },
     { name: "paymentMethod", label: "How will you pay?", kind: "select", options: ["Outright payment", "Instalments", "Mortgage", "Not sure yet"], required: true },
