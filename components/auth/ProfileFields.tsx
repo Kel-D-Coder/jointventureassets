@@ -136,7 +136,7 @@ export function buyerFields(category: string): ProfileFieldSpec[] {
       options: requestTimelines,
       required: true,
     },
-    { name: "paymentMethod", label: "How will you pay?", kind: "select", options: ["Outright payment", "Instalments", "Mortgage", "Not sure yet"], required: true },
+    { name: "paymentMethod", label: "How will you pay?", kind: "select", options: ["Outright payment", "Installments", "Mortgage", "Not sure yet"], required: true },
     { name: "companyName", label: "Company name", hint: "Optional" },
   ];
 }

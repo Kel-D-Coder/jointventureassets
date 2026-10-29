@@ -2,7 +2,7 @@ import { API_TIMEOUT_MS, fetchFailure } from "@/lib/api/session";
 import type { DealType, Listing, PlotOption, PropertyType } from "@/types";
 import type { ListingSubmission } from "@/lib/inbox/types";
 import { coverOf, joinMedia, splitMedia } from "@/lib/videoWatermark";
-import { isLandValueTbd, readPlotOptions } from "@/components/listings/labels";
+import { isLandValueTbd, readPaymentPlan, readPlotOptions } from "@/components/listings/labels";
 
 const BASE = process.env.NEXT_PUBLIC_SERVER_URL ?? "";
 
@@ -152,6 +152,9 @@ function toPublicListing(raw: ServerListing): Listing | null {
       priceNegotiable: l.dealType === "sale" ? l.priceNegotiable : undefined,
       landValueTbd: l.dealType === "jv" ? Boolean(l.landValueTbd) : undefined,
       plotOptions: readPlotOptions(l.plotOptions),
+      estateType: l.estateType === "units" ? "units" : l.estateType === "plots" ? "plots" : undefined,
+      paymentPlan: readPaymentPlan(l.paymentPlan),
+      feeRate: readFeeRate(l),
       ownerName: l.ownerName,
       status: l.underOffer ? "under_offer" : "published",
       featured: Boolean(l.featured),
@@ -183,6 +186,9 @@ function toPublicListing(raw: ServerListing): Listing | null {
     priceNegotiable: raw.dealType === "sale" ? raw.priceNegotiable : undefined,
     landValueTbd: raw.dealType === "jv" ? Boolean(raw.landValueTbd) : undefined,
     plotOptions: readPlotOptions(raw.plotOptions),
+    estateType: raw.estateType === "units" ? "units" : raw.estateType === "plots" ? "plots" : undefined,
+    paymentPlan: readPaymentPlan(raw.paymentPlan),
+    feeRate: readFeeRate(raw),
     ownerName: raw.ownerName ?? "Joint Venture Assets",
     status,
     featured: Boolean(raw.featured),
@@ -221,4 +227,17 @@ export async function recordListingView(id: string, token?: string | null): Prom
   } catch {
     // Offline, or the server is asleep: the view just isn't counted.
   }
+}
+
+/**
+ * A listing's facilitation fee rate, from wherever the server puts it: `saleTerms.feeRate` (as
+ * listing requests send it), or a top-level `feeRate` / `facilitationFeeRate`. A percentage (5)
+ * is read as 0.05. Missing or unusable: undefined, so the standard rate applies.
+ */
+function readFeeRate(raw: unknown): number | undefined {
+  const item = (raw ?? {}) as { saleTerms?: { feeRate?: unknown } | null; feeRate?: unknown; facilitationFeeRate?: unknown };
+  const value = Number(item.saleTerms?.feeRate ?? item.feeRate ?? item.facilitationFeeRate);
+  if (!Number.isFinite(value) || value <= 0) return undefined;
+  const rate = value >= 1 ? value / 100 : value;
+  return rate < 1 ? rate : undefined;
 }

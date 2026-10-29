@@ -5,7 +5,6 @@ import NavbarWrapper from "@/components/layout/NavbarWrapper";
 import FooterWrapper from "@/components/layout/FooterWrapper";
 import StoreProvider from "@/store/StoreProvider";
 import { SessionWatcher } from "@/components/auth/SessionWatcher";
-import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import CookieConsentBanner from "@/components/layout/CookieConsentBanner";
 
 /** Body, forms, buttons and numbers. */
@@ -62,7 +61,6 @@ export default function RootLayout({
           {children}
           <CookieConsentBanner />
           <FooterWrapper />
-          <WhatsAppButton />
         </StoreProvider>
       </body>
     </html>

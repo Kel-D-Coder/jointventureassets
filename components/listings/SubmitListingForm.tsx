@@ -20,7 +20,19 @@ import type { ListingSubmission, SubmittedDocument } from "@/lib/inbox/types";
 import type { DealType, PriceNegotiable, PropertyType } from "@/types";
 import { TitleDocumentPicker } from "@/components/listings/TitleDocumentPicker";
 import { PlotOptionsFields } from "@/components/listings/PlotOptionsFields";
-import { isEstate, plotOptionsFrom, plotRowsFrom, plotRowsProblem, readPlotOptions } from "@/components/listings/labels";
+import {
+  estateKind,
+  isEstate,
+  paymentPlanDraftFrom,
+  paymentPlanFrom,
+  plotOptionsFrom,
+  plotRowsFrom,
+  plotRowsProblem,
+  readPaymentPlan,
+  readPlotOptions,
+  type EstateKind,
+} from "@/components/listings/labels";
+import { PaymentPlanFields } from "@/components/listings/PaymentPlanFields";
 
 const MAX_PHOTOS = 8;
 const MAX_DOCUMENTS = 6;
@@ -39,6 +51,10 @@ const emptyForm = {
   /** Estates: the facilitation fee to JVA, as a percentage (at least 5). */
   estateFeePercent: "",
   plotRows: plotRowsFrom(),
+  /** Estates: plots of land, or houses / apartments by unit type. */
+  estateType: "plots" as EstateKind,
+  /** Estates: how buyers can pay (all optional). */
+  paymentPlan: paymentPlanDraftFrom(),
   sharingFormula: "40/60",
   sharingNegotiable: "" as YesNoValue,
   hasPremium: "" as YesNoValue,
@@ -72,7 +88,7 @@ function validate(form: FormState, images: string[], documents: SubmittedDocumen
   if (!form.title.trim()) errors.title = "Give the property a short title.";
   const estate = form.dealType === "sale" && form.isEstate;
   if (estate) {
-    const problem = plotRowsProblem(form.plotRows);
+    const problem = plotRowsProblem(form.plotRows, form.estateType);
     if (problem) errors.plotOptions = problem;
     const feeProblem = estateFeeProblem(form.estateFeePercent);
     if (feeProblem) errors.estateFeePercent = feeProblem;
@@ -108,9 +124,11 @@ function formFromSubmission(submission: ListingSubmission): FormState {
     sizeSqm: listing.sizeSqm ? String(listing.sizeSqm) : "",
     price: listing.price ? String(listing.price) : "",
     landValueTbd: Boolean(listing.landValueTbd),
-    isEstate: isEstate({ plotOptions: readPlotOptions(listing.plotOptions) }),
-    estateFeePercent: isEstate({ plotOptions: readPlotOptions(listing.plotOptions) }) && listing.saleTerms?.feeRate ? String(Math.round(listing.saleTerms.feeRate * 10000) / 100) : "",
+    isEstate: isEstate({ estateType: listing.estateType, plotOptions: readPlotOptions(listing.plotOptions) }),
+    estateFeePercent: isEstate({ estateType: listing.estateType, plotOptions: readPlotOptions(listing.plotOptions) }) && listing.saleTerms?.feeRate ? String(Math.round(listing.saleTerms.feeRate * 10000) / 100) : "",
     plotRows: plotRowsFrom(readPlotOptions(listing.plotOptions)),
+    estateType: estateKind({ estateType: listing.estateType, plotOptions: readPlotOptions(listing.plotOptions) }),
+    paymentPlan: paymentPlanDraftFrom(readPaymentPlan(listing.paymentPlan)),
     sharingFormula: listing.jv?.sharingFormula ?? emptyForm.sharingFormula,
     sharingNegotiable: booleanAnswer(listing.jv?.sharingNegotiable),
     hasPremium: premiumAnswer(listing.jv?.premium),
@@ -259,7 +277,7 @@ export function SubmitListingForm() {
   });
 
   // Estates: every plot, cheapest first; the cheapest also fills the usual size, price and negotiable fields.
-  const plots = form.dealType === "sale" && form.isEstate ? plotOptionsFrom(form.plotRows) : [];
+  const plots = form.dealType === "sale" && form.isEstate ? plotOptionsFrom(form.plotRows, form.estateType) : [];
   const cheapestPlot = plots[0];
   // The seller's fee: an estate's own percentage once it's valid, otherwise the standard rate.
   const sellerFeeRate = form.dealType === "sale" && form.isEstate && !estateFeeProblem(form.estateFeePercent) ? Number(form.estateFeePercent) / 100 : SALE_FEE_RATE;
@@ -279,6 +297,8 @@ export function SubmitListingForm() {
       price: cheapestPlot ? cheapestPlot.price : form.dealType === "jv" && form.landValueTbd ? 0 : Number(form.price) || 0,
       landValueTbd: form.dealType === "jv" && form.landValueTbd ? true : undefined,
       plotOptions: plots,
+      estateType: plots.length ? form.estateType : undefined,
+      paymentPlan: plots.length ? paymentPlanFrom(form.paymentPlan) : undefined,
       titleDocument: form.titleDocument,
       description: form.description.trim(),
       highlights: form.highlights.split("\n").map((line) => line.trim()).filter(Boolean),
@@ -497,20 +517,39 @@ export function SubmitListingForm() {
             <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 text-sm text-ink sm:col-span-2 has-checked:border-gold has-checked:bg-gold-soft/40">
               <input type="checkbox" checked={form.isEstate} onChange={(e) => set("isEstate", e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#c9a24a]" />
               <span>
-                <span className="font-semibold">This is an estate with several plot sizes</span>
-                <span className="block text-xs text-muted">Add each plot size with its own price, negotiable option and initial deposit.</span>
+                <span className="font-semibold">This is an estate with several plot sizes or unit types</span>
+                <span className="block text-xs text-muted">Add each plot size, or each house / apartment type, with its own price and negotiable option.</span>
               </span>
             </label>
           ) : null}
           {form.dealType === "sale" && form.isEstate ? (
             <div className="sm:col-span-2">
-              <PlotOptionsFields rows={form.plotRows} onChange={(rows) => set("plotRows", rows)} error={errors.plotOptions} />
+              <fieldset className="mb-5">
+                <legend className="mb-2 text-sm font-semibold text-ink">What does the estate sell?</legend>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(
+                    [
+                      ["plots", "Plots of land"],
+                      ["units", "Houses / apartments"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <label
+                      key={value}
+                      className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-line bg-white px-4 py-3 text-sm text-ink has-checked:border-gold has-checked:bg-gold-soft/40"
+                    >
+                      <input type="radio" name="estateType" checked={form.estateType === value} onChange={() => set("estateType", value)} className="accent-[#c9a24a]" />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <PlotOptionsFields rows={form.plotRows} onChange={(rows) => set("plotRows", rows)} error={errors.plotOptions} kind={form.estateType} />
               <Field
                 label="Facilitation fee to JVA (%)"
                 htmlFor="estateFeePercent"
                 required
                 error={errors.estateFeePercent}
-                hint={`At least ${MIN_ESTATE_FEE_PERCENT}%. Paid to JVA from each plot's sale price when it sells.`}
+                hint={`At least ${MIN_ESTATE_FEE_PERCENT}%. Paid to JVA from each ${form.estateType === "units" ? "unit" : "plot"}'s sale price when it sells.`}
                 className="mt-5 sm:max-w-xs"
               >
                 <input
@@ -522,6 +561,7 @@ export function SubmitListingForm() {
                   className={inputClass}
                 />
               </Field>
+              <PaymentPlanFields value={form.paymentPlan} onChange={(plan) => set("paymentPlan", plan)} />
             </div>
           ) : (
             <>

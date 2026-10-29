@@ -11,7 +11,7 @@ import { EnquiryForm } from "@/components/enquiries/EnquiryForm";
 import { ListingGallery } from "@/components/listings/ListingGallery";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { ExpandableDescription } from "@/components/listings/ExpandableDescription";
-import { SHARING_TBD, isEstate, priceNegotiableLabel, priceText, propertyTypeLabel, sharingFormulaLabel, sizeText, splitTitles } from "@/components/listings/labels";
+import { SHARING_TBD, estateKind, isEstate, paymentPlanParts, priceNegotiableLabel, priceText, propertyTypeLabel, sharingFormulaLabel, sizeText, splitTitles } from "@/components/listings/labels";
 import { formatNaira, formatSize, premiumText } from "@/lib/format";
 import type { Listing } from "@/types";
 import { coverOf, joinMedia } from "@/lib/videoWatermark";
@@ -46,7 +46,7 @@ export default async function ListingDetailPage({ params }: Props) {
     .slice(0, 3);
   const facts = [
     { label: listing.dealType === "jv" ? "Land value" : "Asking price", value: priceText(listing) },
-    { label: isEstate(listing) ? "Plot sizes" : "Size", value: sizeText(listing) || "Not stated" },
+    { label: isEstate(listing) ? (estateKind(listing) === "units" ? "Unit sizes" : "Plot sizes") : "Size", value: sizeText(listing) || "Not stated" },
     { label: "Property type", value: propertyTypeLabel[listing.propertyType] },
     { label: splitTitles(listing.titleDocument).length > 1 ? "Title documents" : "Title document", value: listing.titleDocument },
   ];
@@ -128,12 +128,15 @@ export default async function ListingDetailPage({ params }: Props) {
             {listing.jv ? <JvTerms jv={listing.jv} /> : null}
 
             {isEstate(listing) ? (
-              <Panel title="Plot sizes & prices" subtitle="Each plot size has its own price. Ask about any of them in the enquiry form.">
+              <Panel
+                title={estateKind(listing) === "units" ? "Units & prices" : "Plot sizes & prices"}
+                subtitle={`Each ${estateKind(listing) === "units" ? "unit type" : "plot size"} has its own price. Ask about any of them in the enquiry form.`}
+              >
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-lg text-left text-sm">
                     <thead className="text-xs font-semibold tracking-wide text-muted uppercase">
                       <tr className="border-b border-line [&>th]:pb-3">
-                        <th>Plot size</th>
+                        <th>{estateKind(listing) === "units" ? "Unit type" : "Plot size"}</th>
                         <th>Price</th>
                         <th>Negotiable</th>
                         <th className="text-right">Initial deposit</th>
@@ -142,7 +145,10 @@ export default async function ListingDetailPage({ params }: Props) {
                     <tbody className="divide-y divide-line [&_td]:py-3.5">
                       {listing.plotOptions!.map((option, index) => (
                         <tr key={index}>
-                          <td className="font-display text-lg text-ink">{formatSize(option.sizeSqm)}</td>
+                          <td className="font-display text-lg text-ink">
+                            {option.label ?? formatSize(option.sizeSqm)}
+                            {option.label && option.sizeSqm ? <span className="block font-sans text-xs text-muted">{formatSize(option.sizeSqm)}</span> : null}
+                          </td>
                           <td className="font-semibold text-ink tabular-nums">{formatNaira(option.price)}</td>
                           <td>
                             {option.priceNegotiable ? (
@@ -157,6 +163,20 @@ export default async function ListingDetailPage({ params }: Props) {
                     </tbody>
                   </table>
                 </div>
+                {paymentPlanParts(listing.paymentPlan).length || listing.paymentPlan?.notes ? (
+                  <div className="mt-6 rounded-2xl bg-gold-soft/40 p-4 ring-1 ring-gold/30">
+                    <p className="text-sm font-semibold text-ink">Payment plan</p>
+                    <ul className="mt-2 space-y-1.5">
+                      {paymentPlanParts(listing.paymentPlan).map((part) => (
+                        <li key={part} className="flex items-center gap-2 text-sm text-ink">
+                          <FiCheck aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-gold-deep" />
+                          {part}
+                        </li>
+                      ))}
+                    </ul>
+                    {listing.paymentPlan?.notes ? <p className="mt-2 text-xs text-muted">{listing.paymentPlan.notes}</p> : null}
+                  </div>
+                ) : null}
               </Panel>
             ) : null}
 
@@ -197,7 +217,9 @@ export default async function ListingDetailPage({ params }: Props) {
                 eyebrow={listing.dealType === "jv" ? "Joint venture enquiry" : "Purchase enquiry"}
                 jointVenture={listing.dealType === "jv"}
                 salePrice={listing.dealType === "sale" ? listing.price : undefined}
+                feeRate={listing.dealType === "sale" && !isEstate(listing) ? listing.feeRate : undefined}
                 plotOptions={isEstate(listing) ? listing.plotOptions : undefined}
+                estateKind={isEstate(listing) ? estateKind(listing) : undefined}
                 defaultMessage={
                   listing.dealType === "jv"
                     ? `I'm interested in partnering on "${listing.title}". Please share the full JV terms.`

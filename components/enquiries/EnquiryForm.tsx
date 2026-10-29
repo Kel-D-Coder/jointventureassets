@@ -7,18 +7,21 @@ import { usePathname } from "next/navigation";
 import { useAppSelector } from "@/hooks/hooks";
 import { sendEnquiry } from "@/lib/api/inbox";
 import { errorMessage } from "@/lib/api/errors";
-import { cx, formatNaira, formatSize } from "@/lib/format";
-import { SALE_FEE_RATE, saleFee } from "@/lib/fees";
+import { cx, formatNaira } from "@/lib/format";
+import { SALE_FEE_RATE } from "@/lib/fees";
 import { Alert, SubmitButton, inputClass } from "@/components/ui/form";
 import { DocumentUpload } from "@/components/ui/DocumentUpload";
 import type { InboxEnquiry, SubmittedDocument } from "@/lib/inbox/types";
-import { priceNegotiableLabel } from "@/components/listings/labels";
+import { optionName, priceNegotiableLabel, type EstateKind } from "@/components/listings/labels";
 import type { PlotOption } from "@/types";
 
 /**
  * Asks about a listing or a member's request. Every enquiry lands in the
  * dashboard's Enquiries page, labelled with what it's about. Joint-venture
  * listings also ask about the LOI and require the facilitation fee terms.
+ *
+ * Who pays the facilitation fee: on a plain sale and on an estate's houses / apartments the buyer
+ * pays 5% on top; on an estate's plots of land only the owner pays, so buyers see no fee terms.
  */
 export function EnquiryForm({
   target,
@@ -28,6 +31,8 @@ export function EnquiryForm({
   jointVenture = false,
   salePrice,
   plotOptions,
+  estateKind,
+  feeRate = SALE_FEE_RATE,
 }: {
   target: InboxEnquiry["target"];
   eyebrow: string;
@@ -38,6 +43,10 @@ export function EnquiryForm({
   salePrice?: number;
   /** Estates: the plot sizes to choose from; the chosen plot's price is used for the fee terms. */
   plotOptions?: PlotOption[];
+  /** Estates: plots of land or houses / apartments. */
+  estateKind?: EstateKind;
+  /** The listing's own facilitation fee rate from the server (0.05 = 5%); the standard rate when missing. */
+  feeRate?: number;
 }) {
   const { user, token } = useAppSelector((state) => state.auth);
   const pathname = usePathname();
@@ -52,9 +61,18 @@ export function EnquiryForm({
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [plotIndex, setPlotIndex] = useState<number | null>(null);
   const plot = plotOptions && plotIndex !== null ? plotOptions[plotIndex] : undefined;
-  // An estate's fee terms use the chosen plot's price; until one is chosen there's nothing to show.
+  // Houses / apartments are named by unit type; plots by size.
+  const units = estateKind ? estateKind === "units" : Boolean(plotOptions?.some((option) => option.label));
+  // Estate plots: only the owner pays the fee. Estate houses / apartments: the buyer pays the standard 5%.
+  const ownerPaysOnly = Boolean(plotOptions) && !units;
+  const buyerRate = plotOptions ? SALE_FEE_RATE : feeRate;
+  // An estate's fee terms use the chosen plot's price; the amounts show once a plot is chosen.
   const askingPrice = plotOptions ? plot?.price : salePrice;
-  const isSale = !jointVenture && askingPrice !== undefined && askingPrice > 0;
+  const hasPrice = askingPrice !== undefined && askingPrice > 0;
+  const feePercent = Math.round(buyerRate * 10000) / 100;
+  const fee = (price: number) => Math.round(price * buyerRate);
+  // Sales and estates both ask the buyer to accept the fee terms; an estate before any plot is chosen too.
+  const isSale = !jointVenture && !ownerPaysOnly && (Boolean(plotOptions?.length) || hasPrice);
   const [jvErrors, setJvErrors] = useState<{ generateLoi?: string; letterhead?: string }>({});
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -75,7 +93,7 @@ export function EnquiryForm({
       if (problems.generateLoi || problems.letterhead || !acceptedTerms) return;
     }
     if (plotOptions && !plot) {
-      setError("Choose the plot size you're interested in.");
+      setError(units ? "Choose the unit type you're interested in." : "Choose the plot size you're interested in.");
       return;
     }
     if (isSale && !acceptedTerms) {
@@ -91,7 +109,7 @@ export function EnquiryForm({
           jv: jointVenture
             ? { generateLoi: generateLoi === "yes", letterhead: generateLoi === "yes" ? letterhead : undefined, acceptedFeeTerms: true }
             : undefined,
-          sale: isSale ? { acceptedFeeTerms: true, feeRate: SALE_FEE_RATE, askingPrice: askingPrice! } : undefined,
+          sale: isSale && hasPrice ? { acceptedFeeTerms: true, feeRate: buyerRate, askingPrice: askingPrice! } : undefined,
         },
         token,
       );
@@ -151,7 +169,7 @@ export function EnquiryForm({
       {plotOptions ? (
         <label className="block">
           <span className="mb-1.5 block text-sm font-semibold text-ink">
-            Which plot size?<span className="ml-0.5 text-gold-deep" aria-hidden="true">*</span>
+            {units ? "Which unit?" : "Which plot size?"}<span className="ml-0.5 text-gold-deep" aria-hidden="true">*</span>
           </span>
           <select
             required
@@ -165,16 +183,16 @@ export function EnquiryForm({
                 const chosen = plotOptions[index]!;
                 setForm((current) => ({
                   ...current,
-                  message: `I'm interested in a ${formatSize(chosen.sizeSqm)} plot (${formatNaira(chosen.price)}). ${defaultMessage.replace(/^I'm interested in buying "[^"]*"\.\s*/, "")}`.trim(),
+                  message: `I'm interested in a ${optionName(chosen)} (${formatNaira(chosen.price)}). ${defaultMessage.replace(/^I'm interested in buying "[^"]*"\.\s*/, "")}`.trim(),
                 }));
               }
             }}
             className={cx(inputClass, "pr-10", plotIndex === null && "text-gray-400")}
           >
-            <option value="">Choose a plot size</option>
+            <option value="">{units ? "Choose a unit type" : "Choose a plot size"}</option>
             {plotOptions.map((option, index) => (
               <option key={index} value={index}>
-                {formatSize(option.sizeSqm)}: {formatNaira(option.price)}
+                {optionName(option)}: {formatNaira(option.price)}
                 {option.priceNegotiable ? ` (${priceNegotiableLabel[option.priceNegotiable].toLowerCase()})` : ""}
               </option>
             ))}
@@ -262,24 +280,30 @@ export function EnquiryForm({
         <div className="rounded-xl border border-line p-4">
           <p className="text-sm font-semibold text-ink">Facilitation fee</p>
           <p className="mt-1 text-xs leading-relaxed text-muted">
-            When you buy through Joint Venture Assets, a facilitation fee of <strong className="text-ink">{SALE_FEE_RATE * 100}% of the agreed price</strong> is paid{" "}
+            When you buy through Joint Venture Assets, a facilitation fee of <strong className="text-ink">{feePercent}% of the agreed price</strong> is paid{" "}
             <strong className="text-ink">on top of</strong> the price.
           </p>
+          {hasPrice ? (
+          <>
           <dl className="mt-3 space-y-1.5 rounded-lg bg-ivory p-3 text-sm">
             <div className="flex justify-between gap-3">
-              <dt className="text-muted">Asking price</dt>
+              <dt className="text-muted">{plot ? optionName(plot) : "Asking price"}</dt>
               <dd className="font-semibold text-ink tabular-nums">{formatNaira(askingPrice!)}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-muted">Facilitation fee ({SALE_FEE_RATE * 100}%)</dt>
-              <dd className="font-semibold text-ink tabular-nums">+ {formatNaira(saleFee(askingPrice!))}</dd>
+              <dt className="text-muted">Facilitation fee ({feePercent}%)</dt>
+              <dd className="font-semibold text-ink tabular-nums">+ {formatNaira(fee(askingPrice!))}</dd>
             </div>
             <div className="flex justify-between gap-3 border-t border-line pt-1.5">
               <dt className="font-semibold text-ink">Total you&apos;d pay</dt>
-              <dd className="font-bold text-ink tabular-nums">{formatNaira(askingPrice! + saleFee(askingPrice!))}</dd>
+              <dd className="font-bold text-ink tabular-nums">{formatNaira(askingPrice! + fee(askingPrice!))}</dd>
             </div>
           </dl>
-          <p className="mt-2 text-[0.6875rem] text-muted">Worked out on the asking price. The fee is {SALE_FEE_RATE * 100}% of the final agreed price.</p>
+          <p className="mt-2 text-[0.6875rem] text-muted">Worked out on the asking price. The fee is {feePercent}% of the final agreed price.</p>
+          </>
+          ) : (
+            <p className="mt-3 rounded-lg bg-ivory p-3 text-xs text-muted">{units ? "Choose a unit type above to see the fee and the total for that unit." : "Choose a plot size above to see the fee and the total for that plot."}</p>
+          )}
           <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-ink">
             <input
               type="checkbox"
@@ -288,7 +312,7 @@ export function EnquiryForm({
               onChange={(event) => setAcceptedTerms(event.target.checked)}
               className="mt-0.5 h-4 w-4 shrink-0 accent-[#c9a24a]"
             />
-            I agree to pay the {SALE_FEE_RATE * 100}% facilitation fee on top of the agreed price.
+            I agree to pay the {feePercent}% facilitation fee on top of the agreed price.
           </label>
         </div>
       ) : null}

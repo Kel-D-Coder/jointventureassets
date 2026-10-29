@@ -165,7 +165,7 @@ export default function RequestDetails() {
                 <Detail label="Premium">{request.premium > 0 ? `Up to ${formatBudget(String(request.premium))}` : "No premium"}</Detail>
               ) : null}
               {request.titleDocument ? <Detail label="Title accepted">{labelOf(titleDocuments, request.titleDocument)}</Detail> : null}
-              {request.paymentMethod ? <Detail label="Payment">{request.paymentMethod}</Detail> : null}
+              {request.paymentMethod ? <Detail label="Payment">{request.paymentMethod === "Instalments" ? "Installments" : request.paymentMethod}</Detail> : null}
               {request.updatedAt && request.updatedAt !== request.createdAt ? <Detail label="Last updated">{formatDate(request.updatedAt)}</Detail> : null}
             </dl>
           </Panel>

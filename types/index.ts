@@ -36,10 +36,16 @@ export interface Listing {
   status: ListingStatus;
   /** Sale listings: whether the asking price is negotiable. Missing on older listings. */
   priceNegotiable?: PriceNegotiable;
+  /** Sales and estates: JVA's facilitation fee rate for this listing (0.05 = 5%), when the server sends it. */
+  feeRate?: number;
   /** Joint ventures: the land value is still to be determined (price is then 0). */
   landValueTbd?: boolean;
   /** Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the cheapest plot. */
   plotOptions?: PlotOption[];
+  /** Estates: "plots" (plots of land) or "units" (houses / apartments). */
+  estateType?: "plots" | "units";
+  /** Estates: how buyers can pay. */
+  paymentPlan?: PaymentPlan;
   featured: boolean;
   verified: boolean;
   views: number;
@@ -105,10 +111,23 @@ export type PriceNegotiable = "negotiable" | "slightly_negotiable" | "fixed";
  * how negotiable that price is, and the optional initial deposit.
  */
 export interface PlotOption {
+  /** Houses / apartments: the unit type, e.g. "2 Bedroom Apartment + BQ". Missing for plots of land. */
+  label?: string;
+  /** Plots: the plot size. Units: optional (0 when not given). */
   sizeSqm: number;
   /** Naira. */
   price: number;
   priceNegotiable?: PriceNegotiable;
   /** Initial deposit to secure the plot, in naira; optional. */
   deposit?: number;
+}
+
+/** How a buyer can pay for an estate plot or unit; every part is optional. */
+export interface PaymentPlan {
+  /** Naira. */
+  initialDeposit?: number;
+  interestFreeMonths?: number;
+  /** The longest payment plan, in months. */
+  maxMonths?: number;
+  notes?: string;
 }

@@ -1,7 +1,7 @@
 import { API_TIMEOUT_MS, fetchFailure, reportUnauthorized } from "@/lib/api/session";
 import { uploadFile } from "@/lib/api/auth";
 import type { ListingSubmission, NewEnquiry, SubmittedDocument } from "@/lib/inbox/types";
-import type { PlotOption } from "@/types";
+import type { PaymentPlan, PlotOption } from "@/types";
 import { fileExtension, joinMedia, splitMedia } from "@/lib/videoWatermark";
 import { toOwnedListing, type OwnedListing } from "@/lib/api/listings";
 
@@ -49,6 +49,10 @@ export type SubmissionInput = {
     landValueTbd?: boolean;
     /** Estates: the plot sizes, cheapest first. */
     plotOptions?: PlotOption[];
+    /** Estates: "plots" or "units" (houses / apartments). */
+    estateType?: "plots" | "units";
+    /** Estates: how buyers can pay. */
+    paymentPlan?: PaymentPlan;
     priceNegotiable?: "negotiable" | "slightly_negotiable" | "fixed";
     ownerName: string;
   };

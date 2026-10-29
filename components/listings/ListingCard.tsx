@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FiArrowRight, FiCheckCircle, FiMaximize, FiMapPin } from "react-icons/fi";
 import { DealBadge } from "@/components/listings/DealBadge";
-import { isEstate, priceNegotiableLabel, priceText, propertyTypeLabel, sharingFormulaLabel, sizeText, SHARING_TBD } from "@/components/listings/labels";
+import { estateKind, isEstate, priceNegotiableLabel, priceText, propertyTypeLabel, sharingFormulaLabel, sizeText, SHARING_TBD } from "@/components/listings/labels";
 import type { Listing } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
 
@@ -44,7 +44,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
               <FiMaximize aria-hidden="true" /> {sizeText(listing)}
             </span>
           ) : null}
-          {isEstate(listing) ? <span className="rounded-full bg-gold-soft/70 px-2.5 py-1 font-semibold text-gold-deep">{listing.plotOptions!.length} plot sizes</span> : null}
+          {isEstate(listing) ? <span className="rounded-full bg-gold-soft/70 px-2.5 py-1 font-semibold text-gold-deep">{listing.plotOptions!.length} {estateKind(listing) === "units" ? "unit types" : "plot sizes"}</span> : null}
           <span className="rounded-full bg-ivory px-2.5 py-1">{propertyTypeLabel[listing.propertyType]}</span>
           <span className="rounded-full bg-ivory px-2.5 py-1">{listing.titleDocument}</span>
         </div>
