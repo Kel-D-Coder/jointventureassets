@@ -16,6 +16,7 @@ import { formatNaira, formatSize, premiumText } from "@/lib/format";
 import type { Listing } from "@/types";
 import { coverOf, joinMedia } from "@/lib/videoWatermark";
 import { RecordListingView } from "@/components/listings/RecordListingView";
+import { cleanRichText, richTextToPlain } from "@/lib/richTextServer";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!listing) return { title: "Listing not found | Joint Venture Assets" };
   return {
     title: `${listing.title}, ${listing.area}, ${listing.city} | Joint Venture Assets`,
-    description: listing.description,
+    description: richTextToPlain(listing.description).slice(0, 300),
     openGraph: { images: [{ url: coverOf(listing.images) ?? listing.images[0]! }] },
   };
 }
@@ -181,7 +182,7 @@ export default async function ListingDetailPage({ params }: Props) {
             ) : null}
 
             <Panel title={`About this ${listing.dealType === "jv" ? "opportunity" : "property"}`}>
-              <ExpandableDescription text={listing.description} />
+              <ExpandableDescription html={cleanRichText(listing.description)} />
               {listing.highlights.length ? (
                 <ul className="mt-6 grid gap-3 sm:grid-cols-2">
                   {listing.highlights.map((highlight) => (

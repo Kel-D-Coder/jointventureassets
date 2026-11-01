@@ -33,6 +33,8 @@ import {
   type EstateKind,
 } from "@/components/listings/labels";
 import { PaymentPlanFields } from "@/components/listings/PaymentPlanFields";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { isBlankRichText } from "@/lib/richText";
 
 const MAX_PHOTOS = 8;
 const MAX_DOCUMENTS = 6;
@@ -101,7 +103,7 @@ function validate(form: FormState, images: string[], documents: SubmittedDocumen
   if (form.dealType === "jv" && form.hasPremium === "yes" && !(Number(form.premium) > 0)) errors.premium = "Enter the premium in naira.";
   if (!form.area.trim()) errors.area = "Add the area.";
   if (!form.city.trim()) errors.city = "Add the city.";
-  if (!form.description.trim()) errors.description = "Describe the property.";
+  if (isBlankRichText(form.description)) errors.description = "Describe the property.";
   if (!splitTitles(form.titleDocument).length) errors.titleDocument = "Pick at least one title document.";
   if (!images.some((url) => !isVideoUrl(url))) errors.images = "Add at least one photo.";
   if (!documents.length) errors.documents = "Upload at least one title document so we can verify ownership.";
@@ -300,7 +302,7 @@ export function SubmitListingForm() {
       estateType: plots.length ? form.estateType : undefined,
       paymentPlan: plots.length ? paymentPlanFrom(form.paymentPlan) : undefined,
       titleDocument: form.titleDocument,
-      description: form.description.trim(),
+      description: isBlankRichText(form.description) ? "" : form.description,
       highlights: form.highlights.split("\n").map((line) => line.trim()).filter(Boolean),
       ...splitMedia(images),
       jv:
@@ -687,7 +689,13 @@ export function SubmitListingForm() {
             <input id="state" value={form.state} onChange={onText("state")} className={inputClass} />
           </Field>
           <Field label="Description" htmlFor="description" required error={errors.description} className="sm:col-span-3">
-            <textarea id="description" rows={5} value={form.description} onChange={onText("description")} className={inputClass} placeholder="Access roads, terrain, what's nearby, any structures on it." />
+            <RichTextEditor
+              id="description"
+              value={form.description}
+              onChange={(html) => set("description", html)}
+              invalid={Boolean(errors.description)}
+              placeholder="Access roads, terrain, what's nearby, any structures on it, how buyers can pay."
+            />
           </Field>
           <Field label="Highlights" htmlFor="highlights" hint="One per line, e.g. Fenced and gated" className="sm:col-span-3">
             <textarea id="highlights" rows={3} value={form.highlights} onChange={onText("highlights")} className={inputClass} />

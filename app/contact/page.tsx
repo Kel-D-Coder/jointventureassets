@@ -3,7 +3,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { Metadata } from "next";
 import ContactForm from "@/components/contact/ContactForm";
 import { PageHero } from "@/components/ui/PageHero";
-import { WHATSAPP_URL } from "@/lib/site";
+import { PHONE_NUMBERS, WHATSAPP_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Contact Joint Venture Assets - Get Expert Real Estate Partnership Guidance",
@@ -25,10 +25,8 @@ const channels = [
   {
     icon: FiPhone,
     title: "Phone",
-    lines: [
-      { text: "+234 814 043 1570", href: "tel:+2348140431570" },
-      { text: "+234 906 366 5415", href: "tel:+2349063665415" },
-    ],
+    // The same lines as the homepage hero.
+    lines: PHONE_NUMBERS.map((phone) => ({ text: phone.display, href: `tel:${phone.tel}` })),
   },
   {
     icon: FiMail,

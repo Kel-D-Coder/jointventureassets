@@ -3,9 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { FiChevronDown } from "react-icons/fi";
 
-/** Long listing description, clamped to a few lines with a "Show full description" toggle. */
-export function ExpandableDescription({ text, lines = 5 }: { text: string; lines?: number }) {
-  const ref = useRef<HTMLParagraphElement>(null);
+/**
+ * Long listing description, clamped to a few lines with a "Show full description" toggle.
+ * `html` must already be cleaned on the server (see cleanRichText).
+ */
+export function ExpandableDescription({ html, lines = 5 }: { html: string; lines?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
 
@@ -20,22 +23,26 @@ export function ExpandableDescription({ text, lines = 5 }: { text: string; lines
     const observer = new ResizeObserver(check);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [expanded, text]);
+  }, [expanded, html]);
 
   return (
     <div>
-      <p
+      <div
         ref={ref}
-        className="whitespace-pre-line leading-relaxed text-gray-700"
+        className="rich-text leading-relaxed text-gray-700"
+        // About this many lines of text, faded out at the cut.
         style={
           expanded
             ? undefined
-            : { display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: lines, overflow: "hidden" }
+            : {
+                maxHeight: `${lines * 1.625}rem`,
+                overflow: "hidden",
+                maskImage: overflows ? "linear-gradient(to bottom, black 70%, transparent)" : undefined,
+              }
         }
-      >
-        {text}
-      </p>
-      {overflows ? (
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      {overflows || expanded ? (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
