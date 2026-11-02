@@ -13,7 +13,7 @@ import { resizeImage } from "@/lib/image";
 import { VIDEO_LIMITS, discardVideo, isVideoUrl, joinMedia, photosThenVideo, prepareVideo, splitMedia } from "@/lib/videoWatermark";
 import { MAX_DOCUMENT_MB, fileSize, toDocument } from "@/lib/files";
 import { cx, formatNaira } from "@/lib/format";
-import { MIN_ESTATE_FEE_PERCENT, SALE_FEE_RATE, estateFeeProblem, percentDigits, saleFee } from "@/lib/fees";
+import { MIN_ESTATE_FEE_PERCENT, SALE_FEE_RATE, estateFeeProblem, percentDigits } from "@/lib/fees";
 import { Alert, Field, MoneyInput, Select, SubmitButton, YesNo, booleanAnswer, inputClass, premiumAnswer, type YesNoValue } from "@/components/ui/form";
 import { dealTypeLabel, priceNegotiableLabel, priceNegotiableOptions, propertyTypeLabel, documentsToUpload, listInWords, sharingFormulaOptions, splitTitles, SHARING_TBD } from "@/components/listings/labels";
 import type { ListingSubmission, SubmittedDocument } from "@/lib/inbox/types";
@@ -75,6 +75,8 @@ const emptyForm = {
   acceptedSaleFee: false,
   /** Sale listings: how open the asking price is. */
   priceNegotiable: "" as "" | PriceNegotiable,
+  /** Sale listings: whether the buyer pays JVA's facilitation fee on top of the price. Estate plots never charge the buyer. */
+  buyerPaysFee: true,
   ownerName: "",
   fullName: "",
   email: "",
@@ -84,6 +86,15 @@ const emptyForm = {
 type FormState = typeof emptyForm;
 type ErrorKey = keyof FormState | "images" | "documents" | "plotOptions";
 
+/** Whether the buyer pays a facilitation fee on top: never on estate plots; otherwise the seller's choice. */
+const buyerPays = (form: FormState) => form.buyerPaysFee && !(form.isEstate && form.estateType === "plots");
+
+/**
+ * The seller sets their own fee to JVA (at least 5%) on an estate, or when the buyer pays no fee.
+ * Otherwise buyer and seller each pay the standard 5%.
+ */
+const setsOwnFee = (form: FormState) => form.dealType === "sale" && (form.isEstate || !form.buyerPaysFee);
+
 /** Same required fields as publishing a listing in the admin dashboard, plus title documents and contact details. */
 function validate(form: FormState, images: string[], documents: SubmittedDocument[]): Partial<Record<ErrorKey, string>> {
   const errors: Partial<Record<ErrorKey, string>> = {};
@@ -92,6 +103,8 @@ function validate(form: FormState, images: string[], documents: SubmittedDocumen
   if (estate) {
     const problem = plotRowsProblem(form.plotRows, form.estateType);
     if (problem) errors.plotOptions = problem;
+  }
+  if (setsOwnFee(form)) {
     const feeProblem = estateFeeProblem(form.estateFeePercent);
     if (feeProblem) errors.estateFeePercent = feeProblem;
   }
@@ -127,7 +140,7 @@ function formFromSubmission(submission: ListingSubmission): FormState {
     price: listing.price ? String(listing.price) : "",
     landValueTbd: Boolean(listing.landValueTbd),
     isEstate: isEstate({ estateType: listing.estateType, plotOptions: readPlotOptions(listing.plotOptions) }),
-    estateFeePercent: isEstate({ estateType: listing.estateType, plotOptions: readPlotOptions(listing.plotOptions) }) && listing.saleTerms?.feeRate ? String(Math.round(listing.saleTerms.feeRate * 10000) / 100) : "",
+    estateFeePercent: (isEstate({ estateType: listing.estateType, plotOptions: readPlotOptions(listing.plotOptions) }) || listing.buyerPaysFee === false) && listing.saleTerms?.feeRate ? String(Math.round(listing.saleTerms.feeRate * 10000) / 100) : "",
     plotRows: plotRowsFrom(readPlotOptions(listing.plotOptions)),
     estateType: estateKind({ estateType: listing.estateType, plotOptions: readPlotOptions(listing.plotOptions) }),
     paymentPlan: paymentPlanDraftFrom(readPaymentPlan(listing.paymentPlan)),
@@ -145,6 +158,7 @@ function formFromSubmission(submission: ListingSubmission): FormState {
     isOwner: submission.isOwner,
     acceptedSaleFee: Boolean(listing.saleTerms?.acceptedFeeTerms),
     priceNegotiable: listing.priceNegotiable ?? "",
+    buyerPaysFee: listing.buyerPaysFee !== false,
     ownerName: submission.isOwner ? "" : listing.ownerName,
     fullName: contact.fullName,
     email: contact.email,
@@ -281,8 +295,8 @@ export function SubmitListingForm() {
   // Estates: every plot, cheapest first; the cheapest also fills the usual size, price and negotiable fields.
   const plots = form.dealType === "sale" && form.isEstate ? plotOptionsFrom(form.plotRows, form.estateType) : [];
   const cheapestPlot = plots[0];
-  // The seller's fee: an estate's own percentage once it's valid, otherwise the standard rate.
-  const sellerFeeRate = form.dealType === "sale" && form.isEstate && !estateFeeProblem(form.estateFeePercent) ? Number(form.estateFeePercent) / 100 : SALE_FEE_RATE;
+  // The seller's fee: their own percentage (estates, or the buyer pays no fee) once it's valid, otherwise the standard rate.
+  const sellerFeeRate = setsOwnFee(form) && !estateFeeProblem(form.estateFeePercent) ? Number(form.estateFeePercent) / 100 : SALE_FEE_RATE;
 
   const toInput = (): SubmissionInput => ({
     isOwner: form.isOwner,
@@ -318,6 +332,7 @@ export function SubmitListingForm() {
           : undefined,
       priceNegotiable: cheapestPlot ? cheapestPlot.priceNegotiable : form.dealType === "sale" && form.priceNegotiable ? form.priceNegotiable : undefined,
       saleTerms: form.dealType === "sale" && form.acceptedSaleFee ? { acceptedFeeTerms: true, feeRate: sellerFeeRate } : undefined,
+      buyerPaysFee: form.dealType === "sale" ? form.buyerPaysFee : undefined,
       ownerName: form.isOwner ? form.fullName.trim() : form.ownerName.trim(),
     },
   });
@@ -627,7 +642,50 @@ export function SubmitListingForm() {
           </fieldset>
         ) : null}
 
-        {form.dealType === "sale" ? <SellerFee price={cheapestPlot ? cheapestPlot.price : Number(form.price) || 0} rate={sellerFeeRate} /> : null}
+        {form.dealType === "sale" && !(form.isEstate && form.estateType === "plots") ? (
+          <fieldset className="mt-6">
+            <legend className="mb-2 text-sm font-semibold text-ink">Does the buyer pay a facilitation fee?</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {([
+                [true, "Yes, the buyer pays the fee on top"],
+                [false, "No, the buyer pays no fee"],
+              ] as const).map(([value, label]) => (
+                <label
+                  key={label}
+                  className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-line bg-white px-4 py-3 text-sm text-ink has-checked:border-gold has-checked:bg-gold-soft/40"
+                >
+                  <input type="radio" name="buyerPaysFee" checked={form.buyerPaysFee === value} onChange={() => set("buyerPaysFee", value)} className="accent-[#c9a24a]" />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-muted">
+              &ldquo;Yes&rdquo;: you and the buyer each pay JVA {SALE_FEE_RATE * 100}%. &ldquo;No&rdquo;: only you pay JVA, at a rate you set, and buyers see no fee terms.
+            </p>
+            {!form.buyerPaysFee && !form.isEstate ? (
+              <Field
+                label="Facilitation fee to JVA (%)"
+                htmlFor="sellerFeePercent"
+                required
+                error={errors.estateFeePercent}
+                hint={`At least ${MIN_ESTATE_FEE_PERCENT}%. Paid to JVA from the sale price when the property sells.`}
+                className="mt-4 sm:max-w-xs"
+              >
+                <input
+                  id="sellerFeePercent"
+                  inputMode="decimal"
+                  value={form.estateFeePercent}
+                  onChange={(e) => set("estateFeePercent", percentDigits(e.target.value))}
+                  placeholder="e.g. 5"
+                  className={inputClass}
+                />
+              </Field>
+            ) : null}
+          </fieldset>
+        ) : null}
+
+        {/* Both sides pay the standard fee, so show the seller what they'd take home. */}
+        {form.dealType === "sale" && buyerPays(form) ? <SellerFee price={cheapestPlot ? cheapestPlot.price : Number(form.price) || 0} rate={sellerFeeRate} /> : null}
 
         {form.dealType === "jv" ? (
           <div className="mt-6 grid gap-5 rounded-2xl bg-ivory p-5 sm:grid-cols-2">
@@ -855,7 +913,7 @@ export function SubmitListingForm() {
           <p className="mt-1 text-sm text-muted">
             When your property sells through Joint Venture Assets, you pay a facilitation fee of{" "}
             <strong className="text-ink">{Math.round(sellerFeeRate * 10000) / 100}% of the agreed sale price</strong>, taken from the proceeds.
-            {Number(form.price) > 0 ? ` On your asking price that's ${formatNaira(saleFee(Number(form.price)))}.` : ""}
+            {!form.isEstate && Number(form.price) > 0 ? ` On your asking price that's ${formatNaira(Math.round(Number(form.price) * sellerFeeRate))}.` : ""}
           </p>
           <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-ink">
             <input

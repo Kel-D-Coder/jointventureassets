@@ -219,6 +219,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 jointVenture={listing.dealType === "jv"}
                 salePrice={listing.dealType === "sale" ? listing.price : undefined}
                 feeRate={listing.dealType === "sale" && !isEstate(listing) ? listing.feeRate : undefined}
+                buyerPaysFee={listing.buyerPaysFee !== false}
                 plotOptions={isEstate(listing) ? listing.plotOptions : undefined}
                 estateKind={isEstate(listing) ? estateKind(listing) : undefined}
                 defaultMessage={

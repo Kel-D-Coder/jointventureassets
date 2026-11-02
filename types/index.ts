@@ -38,6 +38,8 @@ export interface Listing {
   priceNegotiable?: PriceNegotiable;
   /** Sales and estates: JVA's facilitation fee rate for this listing (0.05 = 5%), when the server sends it. */
   feeRate?: number;
+  /** Sales: false when the buyer pays no facilitation fee (e.g. estate land where only the seller pays). Missing means the buyer pays. */
+  buyerPaysFee?: boolean;
   /** Joint ventures: the land value is still to be determined (price is then 0). */
   landValueTbd?: boolean;
   /** Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the cheapest plot. */

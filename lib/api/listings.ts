@@ -155,6 +155,7 @@ function toPublicListing(raw: ServerListing): Listing | null {
       estateType: l.estateType === "units" ? "units" : l.estateType === "plots" ? "plots" : undefined,
       paymentPlan: readPaymentPlan(l.paymentPlan),
       feeRate: readFeeRate(l),
+      buyerPaysFee: readBuyerPaysFee(l),
       ownerName: l.ownerName,
       status: l.underOffer ? "under_offer" : "published",
       featured: Boolean(l.featured),
@@ -189,6 +190,7 @@ function toPublicListing(raw: ServerListing): Listing | null {
     estateType: raw.estateType === "units" ? "units" : raw.estateType === "plots" ? "plots" : undefined,
     paymentPlan: readPaymentPlan(raw.paymentPlan),
     feeRate: readFeeRate(raw),
+    buyerPaysFee: readBuyerPaysFee(raw),
     ownerName: raw.ownerName ?? "Joint Venture Assets",
     status,
     featured: Boolean(raw.featured),
@@ -227,6 +229,12 @@ export async function recordListingView(id: string, token?: string | null): Prom
   } catch {
     // Offline, or the server is asleep: the view just isn't counted.
   }
+}
+
+/** False only when the listing says the buyer pays no facilitation fee; anything else means they pay. */
+function readBuyerPaysFee(raw: unknown): false | undefined {
+  const value = ((raw ?? {}) as { buyerPaysFee?: unknown }).buyerPaysFee;
+  return value === false || value === "false" ? false : undefined;
 }
 
 /**

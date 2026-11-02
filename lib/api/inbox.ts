@@ -45,6 +45,7 @@ export type SubmissionInput = {
     videos?: string[];
     jv?: { sharingFormula: string; sharingNegotiable?: boolean; premium?: number; proposal: string; duration: string };
     saleTerms?: { acceptedFeeTerms: true; feeRate: number };
+    buyerPaysFee?: boolean;
     /** Joint ventures: land value to be determined (price is then 0). */
     landValueTbd?: boolean;
     /** Estates: the plot sizes, cheapest first. */

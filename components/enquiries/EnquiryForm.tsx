@@ -21,7 +21,8 @@ import type { PlotOption } from "@/types";
  * listings also ask about the LOI and require the facilitation fee terms.
  *
  * Who pays the facilitation fee: on a plain sale and on an estate's houses / apartments the buyer
- * pays 5% on top; on an estate's plots of land only the owner pays, so buyers see no fee terms.
+ * pays 5% on top; on an estate's plots of land, or a sale marked "buyer pays no fee" (buyerPaysFee
+ * false), only the owner pays, so buyers see no fee terms.
  */
 export function EnquiryForm({
   target,
@@ -33,6 +34,7 @@ export function EnquiryForm({
   plotOptions,
   estateKind,
   feeRate = SALE_FEE_RATE,
+  buyerPaysFee = true,
 }: {
   target: InboxEnquiry["target"];
   eyebrow: string;
@@ -47,6 +49,8 @@ export function EnquiryForm({
   estateKind?: EstateKind;
   /** The listing's own facilitation fee rate from the server (0.05 = 5%); the standard rate when missing. */
   feeRate?: number;
+  /** False when the admin marked this listing as one where the buyer pays no facilitation fee. */
+  buyerPaysFee?: boolean;
 }) {
   const { user, token } = useAppSelector((state) => state.auth);
   const pathname = usePathname();
@@ -63,8 +67,8 @@ export function EnquiryForm({
   const plot = plotOptions && plotIndex !== null ? plotOptions[plotIndex] : undefined;
   // Houses / apartments are named by unit type; plots by size.
   const units = estateKind ? estateKind === "units" : Boolean(plotOptions?.some((option) => option.label));
-  // Estate plots: only the owner pays the fee. Estate houses / apartments: the buyer pays the standard 5%.
-  const ownerPaysOnly = Boolean(plotOptions) && !units;
+  // Estate plots, or a listing marked "buyer pays no fee": only the owner pays. Estate houses / apartments: the buyer pays the standard 5%.
+  const ownerPaysOnly = !buyerPaysFee || (Boolean(plotOptions) && !units);
   const buyerRate = plotOptions ? SALE_FEE_RATE : feeRate;
   // An estate's fee terms use the chosen plot's price; the amounts show once a plot is chosen.
   const askingPrice = plotOptions ? plot?.price : salePrice;
@@ -276,6 +280,11 @@ export function EnquiryForm({
         </>
       ) : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
+      {!jointVenture && ownerPaysOnly ? (
+        <p className="rounded-lg bg-ivory px-3 py-2 text-xs text-muted">
+          <strong className="text-ink">No facilitation fee for buyers</strong> on this listing.
+        </p>
+      ) : null}
       {isSale ? (
         <div className="rounded-xl border border-line p-4">
           <p className="text-sm font-semibold text-ink">Facilitation fee</p>
