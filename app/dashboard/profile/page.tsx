@@ -61,9 +61,6 @@ export default function ProfilePage() {
     setLoadError("");
     getMyAccount(user.id, token ?? undefined)
       .then((loaded) => {
-        // TEMP: see exactly what GET /user/me returns, and the status the approval banner reads.
-        console.log("[profile] GET /user/me response:", loaded);
-        console.log("[profile] account status used for approval (after mapping):", loaded?.status);
         setAccount(loaded);
         setFullName(loaded.fullName);
         setPhoneNumber(loaded.phoneNumber);

@@ -76,7 +76,7 @@ export default function Dashboard() {
         setRequests(myRequests)
         setListings(allListings)
       })
-      .catch((error) => console.error("Couldn't load the dashboard:", error))
+      .catch(() => undefined)
       .finally(() => !cancelled && setIsLoading(false))
 
     // A failure loading the account shouldn't block the rest of the dashboard.
