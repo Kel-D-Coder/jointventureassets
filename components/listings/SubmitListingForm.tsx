@@ -48,7 +48,7 @@ const emptyForm = {
   price: "",
   /** Joint ventures: land value to be determined. */
   landValueTbd: false,
-  /** Sale listings: an estate with several plot sizes, each with its own price. */
+  /** Sale listings: an estate with one or more plot sizes or unit types, each with its own price. */
   isEstate: false,
   /** Estates: the facilitation fee to JVA, as a percentage (at least 5). */
   estateFeePercent: "",
@@ -534,8 +534,8 @@ export function SubmitListingForm() {
             <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 text-sm text-ink sm:col-span-2 has-checked:border-gold has-checked:bg-gold-soft/40">
               <input type="checkbox" checked={form.isEstate} onChange={(e) => set("isEstate", e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#c9a24a]" />
               <span>
-                <span className="font-semibold">This is an estate with several plot sizes or unit types</span>
-                <span className="block text-xs text-muted">Add each plot size, or each house / apartment type, with its own price and negotiable option.</span>
+                <span className="font-semibold">This is an estate</span>
+                <span className="block text-xs text-muted">Add one or more plot sizes, or house / apartment types, each with its own price and negotiable option.</span>
               </span>
             </label>
           ) : null}

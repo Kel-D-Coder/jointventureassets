@@ -84,15 +84,16 @@ export function priceText(
   short = false,
 ): string {
   if (isLandValueTbd(listing)) return short ? "TBD" : "To be determined";
-  // Estates: the cheapest plot, as "From ₦12M".
+  // Estates: the cheapest plot, as "From ₦12M" (just the price when there's only one).
   if (isEstate(listing)) {
     const cheapest = Math.min(...listing.plotOptions!.map((option) => option.price));
-    return `From ${short ? formatNairaShort(cheapest) : formatNaira(cheapest)}`;
+    const amount = short ? formatNairaShort(cheapest) : formatNaira(cheapest);
+    return listing.plotOptions!.length > 1 ? `From ${amount}` : amount;
   }
   return short ? formatNairaShort(listing.price) : formatNaira(listing.price);
 }
 
-// ── Estates: listings with several plot sizes ───────────────────────────────
+// ── Estates: listings sold by plot size or unit type ───────────────────────────────
 
 /** An estate sells either plots of land, or houses / apartments by unit type. */
 export type EstateKind = "plots" | "units";
@@ -155,12 +156,14 @@ export function plotRowsProblem(rows: PlotRow[], kind: EstateKind = "plots"): st
 }
 
 /**
- * True when the listing is an estate: several plot sizes or unit types, or houses / apartments
- * with even one unit type (e.g. many identical 2-bedroom flats, each sold on its own).
+ * True when the listing is an estate. One plot size or unit type is enough (e.g. a single 600 sqm
+ * plot, or many identical 2-bedroom flats, each sold on its own) when the listing is marked as an
+ * estate; older listings without the mark count when they have several.
  */
 export const isEstate = (listing: { estateType?: string; plotOptions?: PlotOption[] }) => {
   const count = listing.plotOptions?.length ?? 0;
-  return count > 1 || (count > 0 && estateKind(listing) === "units");
+  if (!count) return false;
+  return count > 1 || listing.estateType === "plots" || estateKind(listing) === "units";
 };
 
 /** Houses / apartments when the listing says so, or when its options are named unit types; otherwise plots. */

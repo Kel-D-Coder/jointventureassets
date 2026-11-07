@@ -52,9 +52,14 @@ export function login(email: string, password: string): Promise<AuthResponse> {
   return call("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
 }
 
-/** Google login — passes googleEmail to the backend */
-export function loginWithGoogle(googleEmail: string): Promise<AuthResponse> {
-  return call("/auth/login", { method: "POST", body: JSON.stringify({ googleEmail }) });
+/**
+ * POST /auth/google: signs in, or signs up, with Google through Supabase Auth. `accessToken` is
+ * the Supabase access token; the server checks it with Supabase (auth.get_user) and takes the
+ * email and name from it. `role` and `category` come from the sign-up steps and are only sent
+ * from there; without them the server should refuse an email it doesn't know.
+ */
+export function continueWithGoogle(input: { accessToken: string; role?: string; category?: string }): Promise<AuthResponse & { isNewUser?: boolean }> {
+  return call("/auth/google", { method: "POST", body: JSON.stringify(input) });
 }
 
 /** PATCH /user/complete-profile — requires auth token */

@@ -99,7 +99,7 @@ export default function LoginFormClient() {
       <div className="my-6 flex items-center gap-4 text-xs font-semibold tracking-wider text-muted uppercase">
         <span className="h-px flex-1 bg-line" /> or <span className="h-px flex-1 bg-line" />
       </div>
-      <GoogleButton />
+      <GoogleButton redirectTo={destination} />
     </AuthShell>
   );
 }
