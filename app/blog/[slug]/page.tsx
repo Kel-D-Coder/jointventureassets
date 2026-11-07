@@ -26,7 +26,8 @@ export async function generateMetadata({ params }: Props) {
   return {
     title: `${post.title} | Joint Venture Assets`,
     description: post.excerpt,
-    openGraph: { images: [{ url: post.image }] },
+    alternates: { canonical: `/blog/${slug}` },
+    openGraph: { type: "article", title: post.title, description: post.excerpt, url: `/blog/${slug}`, images: [{ url: post.image }] },
   };
 }
 

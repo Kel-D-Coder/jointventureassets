@@ -4,8 +4,10 @@ import { Metadata } from "next";
 import ContactForm from "@/components/contact/ContactForm";
 import { PageHero } from "@/components/ui/PageHero";
 import { PHONE_NUMBERS, WHATSAPP_URL } from "@/lib/site";
+import { AuthReady } from "@/components/auth/AuthReady";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/contact" },
   title: "Contact Joint Venture Assets - Get Expert Real Estate Partnership Guidance",
   description: "Ready to start your joint venture journey? Contact Joint Venture Assets for expert guidance on real estate partnerships. Free consultation available for landowners, investors, cooperatives, and government entities.",
   keywords: ["Joint Venture Assets", "JVA", "contact", "real estate partnerships", "joint ventures", "landowners", "investors", "consultation", "property development"],
@@ -106,7 +108,7 @@ export default function Contact() {
           </div>
         </div>
 
-        <ContactForm />
+        <AuthReady><ContactForm /></AuthReady>
       </div>
     </main>
   );

@@ -11,6 +11,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Toaster } from "react-hot-toast";
 import { ADMIN_DASHBOARD_URL, mainNav } from "@/lib/site";
+import { useAuthReady } from "@/hooks/hooks";
 import { cx } from "@/lib/format";
 
 import Logo from "@/assets/logo/jva_2-removebg-preview.png"
@@ -19,6 +20,8 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  // Until the saved sign-in loads, show neither "Log in" nor the account menu, to avoid a flash.
+  const authReady = useAuthReady();
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const pathname = usePathname();
@@ -77,7 +80,7 @@ export default function Navbar() {
         </ul>
 
         <div className="ml-auto hidden items-center gap-2 lg:flex">
-          {isAuthenticated && user ? (
+          {!authReady ? null : isAuthenticated && user ? (
             <div className="relative">
               <button
                 type="button"
@@ -172,7 +175,7 @@ export default function Navbar() {
               ))}
             </ul>
             <div className="mt-auto space-y-2 border-t border-line pt-5">
-              {isAuthenticated && user ? (
+              {!authReady ? null : isAuthenticated && user ? (
                 <>
                   <Link href="/dashboard" className="block rounded-xl bg-ink px-4 py-3 text-center font-semibold text-white">
                     My dashboard

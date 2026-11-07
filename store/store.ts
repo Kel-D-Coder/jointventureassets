@@ -1,7 +1,13 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import authReducer from "./authSlice";
 import { persistReducer } from "redux-persist";
-import storage from "redux-persist/lib/storage";
+import createWebStorage from "redux-persist/lib/storage/createWebStorage";
+
+/** localStorage in the browser; nothing on the server, where pages render signed out. */
+const storage =
+    typeof window === "undefined"
+        ? { getItem: async () => null, setItem: async () => undefined, removeItem: async () => undefined }
+        : createWebStorage("local");
 
 const rootReducer = combineReducers({
     auth: authReducer

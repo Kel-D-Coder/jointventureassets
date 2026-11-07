@@ -1,33 +1,23 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { Provider } from "react-redux"
-import { PersistGate } from "redux-persist/integration/react"
 import { persistStore } from "redux-persist"
 import { AppStore, makestore } from "./store"
 
-
+/**
+ * The Redux store for the whole site. Pages render straight away (also on the server, so search
+ * engines get the full HTML); the saved sign-in loads from the browser right after. Anything that
+ * depends on who's signed in waits for that with <AuthReady> (see components/auth/AuthReady.tsx).
+ */
 export default function StoreProvider({ children }: { children: React.ReactNode }) {
   const storeRef = useRef<AppStore | null>(null)
-  const [persistor, setPersistor] = useState<any>(null)
-  const [isClient, setIsClient] = useState(false)
+  if (!storeRef.current) storeRef.current = makestore()
 
+  // Load the saved sign-in from the browser; sets _persist.rehydrated when done.
   useEffect(() => {
-    setIsClient(true)
-    if (!storeRef.current) {
-      storeRef.current = makestore()
-      const ps = persistStore(storeRef.current) // ✅ Create persistor only on client
-      setPersistor(ps)
-    }
+    persistStore(storeRef.current!)
   }, [])
 
-  if (!isClient || !storeRef.current || !persistor) return null
-
-  return (
-    <Provider store={storeRef.current}>
-      <PersistGate loading={null} persistor={persistor}>
-        {children}
-      </PersistGate>
-    </Provider>
-  )
+  return <Provider store={storeRef.current}>{children}</Provider>
 }

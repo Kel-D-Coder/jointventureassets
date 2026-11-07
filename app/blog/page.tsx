@@ -9,6 +9,7 @@ import { PageHero } from "@/components/ui/PageHero";
 export const metadata: Metadata = {
   title: "Insights | Joint Venture Assets",
   description: "Insights on real estate, land ownership, and joint ventures in Nigeria.",
+  alternates: { canonical: "/blog" },
 };
 
 export default function BlogPage() {

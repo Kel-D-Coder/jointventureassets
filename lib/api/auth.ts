@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/errors";
 import { API_TIMEOUT_MS, fetchFailure, reportUnauthorized } from "@/lib/api/session";
 import type { AuthUser } from "@/types";
 import type { ProfileDocuments } from "@/lib/inbox/types";
@@ -31,7 +32,7 @@ async function call<T>(path: string, init?: RequestInit, token?: string): Promis
   reportUnauthorized(response, Boolean(token));
 
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error((body as { message?: string }).message ?? "Something went wrong. Please try again.");
+  if (!response.ok) throw new ApiError((body as { message?: string }).message ?? "Something went wrong. Please try again.", response.status);
   return body as T;
 }
 
@@ -53,13 +54,12 @@ export function login(email: string, password: string): Promise<AuthResponse> {
 }
 
 /**
- * POST /auth/google: signs in, or signs up, with Google through Supabase Auth. `accessToken` is
- * the Supabase access token; the server checks it with Supabase (auth.get_user) and takes the
- * email and name from it. `role` and `category` come from the sign-up steps and are only sent
- * from there; without them the server should refuse an email it doesn't know.
+ * POST /auth/login with googleEmail: signs in the account with that email. The email comes from
+ * the Google account the person signed into through Supabase, never from a form. 404 when there's
+ * no account with that email yet.
  */
-export function continueWithGoogle(input: { accessToken: string; role?: string; category?: string }): Promise<AuthResponse & { isNewUser?: boolean }> {
-  return call("/auth/google", { method: "POST", body: JSON.stringify(input) });
+export function loginWithGoogle(googleEmail: string): Promise<AuthResponse> {
+  return call("/auth/login", { method: "POST", body: JSON.stringify({ googleEmail }) });
 }
 
 /** PATCH /user/complete-profile — requires auth token */

@@ -2,10 +2,12 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { SubmitListingForm } from "@/components/listings/SubmitListingForm";
 import { PageHero } from "@/components/ui/PageHero";
+import { AuthReady } from "@/components/auth/AuthReady";
 
 export const metadata: Metadata = {
   title: "List Your Property | Joint Venture Assets",
   description: "List your land or property with Joint Venture Assets, for a joint venture or an outright sale. Our team verifies every listing before it goes live.",
+  alternates: { canonical: "/listings/submit" },
 };
 
 const steps = [
@@ -25,7 +27,7 @@ export default function SubmitListingPage() {
       />
       <div className="mx-auto grid max-w-7xl gap-10 px-4 pt-12 sm:px-6 lg:grid-cols-[1fr_20rem] lg:px-8">
         <Suspense fallback={<div className="h-96 animate-pulse rounded-2xl bg-ivory" />}>
-          <SubmitListingForm />
+          <AuthReady><SubmitListingForm /></AuthReady>
         </Suspense>
         <aside className="order-first self-start rounded-2xl bg-ink p-7 text-white lg:sticky lg:top-28 lg:order-none">
           <p className="eyebrow text-gold">How it works</p>

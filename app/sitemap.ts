@@ -1,55 +1,49 @@
-import type { MetadataRoute } from 'next';
-import { getListings } from '@/lib/api/listings';
+import type { MetadataRoute } from "next";
+import { getApprovedListings } from "@/lib/api/listings";
+import { SITE_URL } from "@/lib/site";
+import { blogPosts } from "@/utils/blogdata";
+import type { Listing } from "@/types";
+
+/** Rebuilt at most once an hour, so new listings show up without a redeploy. */
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://www.jointventureassets.com';
-  const currentDate = new Date();
-  
+  const now = new Date();
+  const page = (path: string, changeFrequency: "daily" | "weekly" | "monthly", priority: number) => ({
+    url: `${SITE_URL}${path}`,
+    lastModified: now,
+    changeFrequency,
+    priority,
+  });
+
   const staticPages = [
-    {
-      url: `${baseUrl}/blog`,
-      lastModified: currentDate,
-      changeFrequency: 'daily' as const,
-      priority: 1.0,
-    },
-    {
-      url: baseUrl,
-      lastModified: currentDate,
-      changeFrequency: 'daily' as const,
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/listings`,
-      lastModified: currentDate,
-      changeFrequency: 'daily' as const,
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly' as const,
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/login`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly' as const,
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/register`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly' as const,
-      priority: 0.5,
-    },
+    page("", "daily", 1.0),
+    page("/listings", "daily", 0.9),
+    page("/how-it-works", "monthly", 0.7),
+    page("/listings/submit", "monthly", 0.6),
+    page("/blog", "weekly", 0.7),
+    page("/contact", "monthly", 0.6),
+    page("/register", "monthly", 0.4),
   ];
 
-  const listingPages = (await getListings()).map((listing) => ({
-    url: `${baseUrl}/listings/${listing.id}`,
+  const blogPages = blogPosts.map((post) => {
+    const date = new Date(post.date);
+    return {
+      url: `${SITE_URL}/blog/${post.slug}`,
+      lastModified: Number.isNaN(date.getTime()) ? now : date,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    };
+  });
+
+  // The server may be asleep: still serve the rest of the sitemap rather than an error.
+  const listings = await getApprovedListings().catch((): Listing[] => []);
+  const listingPages = listings.map((listing) => ({
+    url: `${SITE_URL}/listings/${listing.id}`,
     lastModified: new Date(listing.createdAt),
-    changeFrequency: 'weekly' as const,
-    priority: 0.7,
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
   }));
 
-  return [...staticPages, ...listingPages];
+  return [...staticPages, ...listingPages, ...blogPages];
 }

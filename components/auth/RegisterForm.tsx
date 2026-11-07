@@ -11,7 +11,8 @@ import { AppDispatch } from "@/store/store";
 import { setCredentials } from "@/store/authSlice";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { SignupSteps } from "@/components/auth/SignupSteps";
-import { GoogleButton } from "@/components/auth/GoogleBtn";
+// Google sign-in is switched off for now; uncomment this and the button below to bring it back.
+// import { GoogleButton } from "@/components/auth/GoogleBtn";
 import { Alert, Field, PasswordInput, SubmitButton, inputClass } from "@/components/ui/form";
 
 interface RegisterFormProps {
@@ -104,10 +105,12 @@ export default function RegisterForm({ role = "Buyer", category = "" }: Register
         </p>
       </form>
 
+      {/* Google sign-in is switched off for now.
       <div className="my-6 flex items-center gap-4 text-xs font-semibold tracking-wider text-muted uppercase">
         <span className="h-px flex-1 bg-line" /> or <span className="h-px flex-1 bg-line" />
       </div>
       <GoogleButton role={formData.role} category={formData.category} />
+      */}
     </AuthShell>
   );
 }

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Listings: Joint Venture Land & Property for Sale | Joint Venture Assets",
   description:
     "Browse verified joint-venture land opportunities and properties for sale across Nigeria. Filter by deal type, location and property type.",
-  alternates: { canonical: "https://www.jointventureassets.com/listings" },
+  alternates: { canonical: "/listings" },
 };
 
 export default function ListingsPage() {

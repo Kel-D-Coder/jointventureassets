@@ -6,13 +6,39 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Alert } from "@/components/ui/form";
-import { continueWithGoogle } from "@/lib/api/auth";
-import { errorMessage } from "@/lib/api/errors";
+import { loginWithGoogle, register, type AuthResponse } from "@/lib/api/auth";
+import { ApiError, errorMessage } from "@/lib/api/errors";
 import { finishGoogleSignIn } from "@/lib/supabase";
 import { setCredentials } from "@/store/authSlice";
 import type { AppDispatch } from "@/store/store";
 
-/** Finishes "Continue with Google": Supabase's code → Supabase token → JVA session. */
+/**
+ * A long random password for accounts made with Google: the server's sign-up needs one, but the
+ * person never uses it. They sign in with Google (or can set a password with "Forgot password").
+ */
+function randomPassword(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return `Gg1!${Array.from(bytes, (byte) => byte.toString(36).padStart(2, "0")).join("")}`;
+}
+
+/**
+ * Signs in with the Google email (POST /auth/login, googleEmail). No account yet: on the sign-up
+ * page (role chosen) one is created first; on the login page they're asked to sign up.
+ */
+async function signInOrSignUp(account: { email: string; fullName: string }, role?: string, category?: string): Promise<{ response: AuthResponse; isNew: boolean }> {
+  try {
+    return { response: await loginWithGoogle(account.email), isNew: false };
+  } catch (caught) {
+    if (!(caught instanceof ApiError && caught.status === 404)) throw caught;
+    if (!role) throw new Error(`There's no account for ${account.email} yet. Create an account first, then you can continue with Google.`);
+    const password = randomPassword();
+    await register({ fullName: account.fullName, email: account.email, password, confirmPassword: password, role, category: category ?? "" });
+    // Sign in the same way as every later visit, so the session is a Google one.
+    return { response: await loginWithGoogle(account.email), isNew: true };
+  }
+}
+
+/** Finishes "Continue with Google": Supabase's code → the Google email → JVA session. */
 export default function GoogleCallback() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
@@ -39,10 +65,10 @@ export default function GoogleCallback() {
 
     (async () => {
       try {
-        const accessToken = await finishGoogleSignIn(code);
-        const response = await continueWithGoogle({ accessToken, role, category });
+        const account = await finishGoogleSignIn(code);
+        const { response, isNew } = await signInOrSignUp(account, role, category);
         dispatch(setCredentials({ user: response.user, token: response.token }));
-        if (response.isNewUser) {
+        if (isNew) {
           const r = response.user.role || role || "";
           const c = response.user.category || category || "";
           router.replace(`/complete-profile?role=${encodeURIComponent(r)}&category=${encodeURIComponent(c)}`);

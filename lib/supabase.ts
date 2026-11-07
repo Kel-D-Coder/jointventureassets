@@ -36,14 +36,17 @@ export async function startGoogleSignIn(after: { role?: string; category?: strin
 }
 
 /**
- * On /auth/callback: swaps Google's one-time code for a Supabase access token, for the JVA
- * server to check. The Supabase session is then dropped; the server's own token is used instead.
+ * On /auth/callback: swaps Google's one-time code for the signed-in Google account's email and
+ * name. Supabase checks the account with Google, so the email is one the person really owns.
+ * The Supabase session is then dropped; the JVA server's own session is used instead.
  */
-export async function finishGoogleSignIn(code: string): Promise<string> {
+export async function finishGoogleSignIn(code: string): Promise<{ email: string; fullName: string }> {
   const auth = supabase().auth;
   const { data, error } = await auth.exchangeCodeForSession(code);
-  if (error || !data.session) throw new Error("Google sign-in didn't finish. Please try again.");
-  const token = data.session.access_token;
+  const user = data.session?.user;
+  if (error || !user?.email) throw new Error("Google sign-in didn't finish. Please try again.");
+  const meta = user.user_metadata as { full_name?: string; name?: string };
+  const account = { email: user.email, fullName: meta.full_name ?? meta.name ?? user.email.split("@")[0]! };
   await auth.signOut({ scope: "local" });
-  return token;
+  return account;
 }

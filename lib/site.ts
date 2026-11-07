@@ -1,3 +1,12 @@
+/**
+ * The site's one public address, used for canonical links, the sitemap and share previews. It must
+ * match the address the hosting serves: www.jointventureassets.com currently redirects here.
+ */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://jointventureassets.com").replace(/\/$/, "");
+
+/** The share image for pages without their own (the JVA logo). */
+export const SHARE_IMAGE = "/jva_2-removebg-preview.png";
+
 /** The standalone admin dashboard (jointventureassets-dashboard), linked for Admin accounts. */
 export const ADMIN_DASHBOARD_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:5175";
 

@@ -17,6 +17,7 @@ import type { Listing } from "@/types";
 import { coverOf, joinMedia } from "@/lib/videoWatermark";
 import { RecordListingView } from "@/components/listings/RecordListingView";
 import { cleanRichText, richTextToPlain } from "@/lib/richTextServer";
+import { AuthReady } from "@/components/auth/AuthReady";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -27,12 +28,17 @@ function kindLine(listing: Listing): string {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const listing = await getListing((await params).id);
-  if (!listing) return { title: "Listing not found | Joint Venture Assets" };
+  const { id } = await params;
+  const listing = await getListing(id);
+  if (!listing) return { title: "Listing not found | Joint Venture Assets", robots: { index: false } };
+  const title = `${listing.title}, ${listing.area}, ${listing.city} | Joint Venture Assets`;
+  const description = richTextToPlain(listing.description).replace(/\s+/g, " ").trim().slice(0, 160);
+  const image = coverOf(listing.images) ?? listing.images[0];
   return {
-    title: `${listing.title}, ${listing.area}, ${listing.city} | Joint Venture Assets`,
-    description: richTextToPlain(listing.description).slice(0, 300),
-    openGraph: { images: [{ url: coverOf(listing.images) ?? listing.images[0]! }] },
+    title,
+    description,
+    alternates: { canonical: `/listings/${id}` },
+    openGraph: { title, description, url: `/listings/${id}`, ...(image ? { images: [{ url: image }] } : {}) },
   };
 }
 
@@ -108,7 +114,7 @@ export default async function ListingDetailPage({ params }: Props) {
 
         <div className="mt-8">
           <ListingGallery images={joinMedia(listing.images, listing.videos)} title={listing.title} />
-          <RecordListingView listingId={listing.id} />
+          <AuthReady><RecordListingView listingId={listing.id} /></AuthReady>
         </div>
 
         <div className="mt-12 grid gap-12 lg:grid-cols-[1fr_24rem]">
@@ -213,6 +219,7 @@ export default async function ListingDetailPage({ params }: Props) {
           <aside>
             <div className="relative overflow-hidden rounded-3xl border border-line bg-white p-6 shadow-[0_24px_48px_-28px_rgb(14_17_22/0.4)] lg:sticky lg:top-24">
               <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-gold-deep via-gold to-gold-deep" />
+              <AuthReady>
               <EnquiryForm
                 target={{ type: "listing", id: listing.id, title: listing.title, subtitle: `${listing.area}, ${listing.city}`, image: coverOf(listing.images) }}
                 eyebrow={listing.dealType === "jv" ? "Joint venture enquiry" : "Purchase enquiry"}
@@ -229,6 +236,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 }
                 submitLabel={listing.dealType === "jv" ? "Request JV terms" : "Request an inspection"}
               />
+              </AuthReady>
             </div>
           </aside>
         </div>

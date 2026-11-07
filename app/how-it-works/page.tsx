@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: "How It Works | Joint Venture Assets",
   description:
     "How Joint Venture Assets verifies partners, matches landowners with investors and developers, and manages real estate joint ventures and sales to completion.",
+  alternates: { canonical: "/how-it-works" },
 };
 
 export default function HowItWorks() {

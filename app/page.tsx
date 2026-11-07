@@ -38,18 +38,16 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://www.jointventureassets.com/",
+    canonical: "/",
   },
   openGraph: {
     title: "Joint Venture Assets | #1 Real Estate Joint Venture Platform in Nigeria",
     description: "Connect with verified partners for profitable real estate joint ventures. Landowners, investors, and developers find your perfect match for property development in Nigeria.",
-    url: "https://www.jointventureassets.com/",
+    url: "/",
     siteName: "Joint Venture Assets",
     images: [
       {
         url: "/jva_2-removebg-preview.png",
-        width: 1200,
-        height: 630,
         alt: "Joint Venture Assets - Real Estate Collaboration Platform"
       }
     ],
