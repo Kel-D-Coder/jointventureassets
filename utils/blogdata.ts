@@ -1,4 +1,15 @@
-export const blogPosts = [
+export interface BlogPost {
+  slug: string;
+  title: string;
+  excerpt: string;
+  date: string;
+  readTime: string;
+  image: string;
+  /** Plain text; lines starting "## " are section headings. */
+  content: string;
+}
+
+export const blogPosts: BlogPost[] = [
   {
     "slug": "risks-of-buying-land-without-proper-title-in-nigeria",
     "title": "Risks of Buying Land Without Proper Title in Nigeria",

@@ -1,52 +1,31 @@
-"use client"
-
-import { motion } from "framer-motion"
-import { ReactNode } from "react"
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { FiArrowRight } from "react-icons/fi";
 
 interface EmptyStateProps {
-  icon: ReactNode
-  title: string
-  description: string
-  action?: {
-    label: string
-    onClick: () => void
-  }
+  icon: ReactNode;
+  title: string;
+  description: string;
+  action?: { label: string; href: string };
 }
 
 export default function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5 }}
-      className="flex flex-col items-center justify-center py-12 px-6 text-center"
-    >
-      <motion.div
-        className="text-gray-300 mb-4"
-        animate={{
-          y: [0, -10, 0],
-        }}
-        transition={{
-          repeat: Infinity,
-          duration: 2,
-          ease: "easeInOut",
-        }}
-      >
+    <div className="flex flex-col items-center rounded-2xl border border-dashed border-gold/40 bg-linear-to-b from-ivory/80 to-white px-6 py-12 text-center">
+      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-ink text-gold shadow-[0_12px_28px_-12px_rgb(14_17_22/0.6)] ring-1 ring-gold/30">
         {icon}
-      </motion.div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600 text-sm mb-6 max-w-md">{description}</p>
-      {action && (
-        <motion.button
-          onClick={action.onClick}
-          className="bg-gray-900 hover:bg-yellow-500 text-white hover:text-gray-900 font-semibold px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+      </span>
+      <h3 className="mt-5 font-display text-xl text-ink">{title}</h3>
+      <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">{description}</p>
+      {action ? (
+        <Link
+          href={action.href}
+          className="group mt-6 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-ink-soft"
         >
-          <span className="text-xl">+</span>
           {action.label}
-        </motion.button>
-      )}
-    </motion.div>
-  )
+          <FiArrowRight aria-hidden="true" className="text-gold transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      ) : null}
+    </div>
+  );
 }

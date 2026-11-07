@@ -1,60 +1,23 @@
-"use client"
-
-import { motion } from "framer-motion"
-import { ReactNode } from "react"
+import type { ReactNode } from "react";
 
 interface StatCardProps {
-  icon: ReactNode
-  label: string
-  value: number
-  bgColor: string
-  iconColor: string
-  delay?: number
+  icon: ReactNode;
+  label: string;
+  value: number | string;
+  note?: string;
 }
 
-export default function StatCard({ icon, label, value, bgColor, iconColor, delay = 0 }: StatCardProps) {
+export default function StatCard({ icon, label, value, note }: StatCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.5, type: "spring", stiffness: 100 }}
-      whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0, 0, 0, 0.2)" }}
-      className="bg-white rounded-xl p-6 shadow-md border border-gray-100 relative overflow-hidden group"
-    >
-      {/* Background decoration */}
-      <motion.div
-        className={`absolute -right-4 -top-4 w-24 h-24 ${bgColor} rounded-full opacity-10 blur-2xl`}
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.1, 0.15, 0.1],
-        }}
-        transition={{
-          repeat: Infinity,
-          duration: 3,
-          ease: "easeInOut",
-        }}
-      />
-      
-      <div className="flex items-start justify-between relative z-10">
-        <div className="flex-1">
-          <p className="text-gray-600 text-sm font-medium mb-2">{label}</p>
-          <motion.p
-            className="text-3xl font-bold text-gray-900"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: delay + 0.2, type: "spring", stiffness: 200 }}
-          >
-            {value}
-          </motion.p>
-        </div>
-        <motion.div
-          className={`${bgColor} ${iconColor} p-3 rounded-lg`}
-          whileHover={{ rotate: 360, scale: 1.1 }}
-          transition={{ duration: 0.5 }}
-        >
-          {icon}
-        </motion.div>
+    <div className="group relative overflow-hidden rounded-2xl border border-line bg-white p-6 shadow-[0_1px_2px_rgb(14_17_22/0.04)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgb(14_17_22/0.35)]">
+      {/* A gold hairline along the top, brighter on hover. */}
+      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-transparent via-gold/60 to-transparent opacity-60 transition-opacity group-hover:opacity-100" />
+      <div className="flex items-center gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-ink text-lg text-gold shadow-[inset_0_0_0_1px_rgb(201_162_74/0.25)]">{icon}</span>
+        <p className="text-sm font-semibold text-muted">{label}</p>
       </div>
-    </motion.div>
-  )
+      <p className="mt-5 font-display text-5xl leading-none tracking-tight text-ink tabular-nums">{value}</p>
+      {note ? <p className="mt-3 text-sm text-muted">{note}</p> : null}
+    </div>
+  );
 }

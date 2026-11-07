@@ -1,0 +1,739 @@
+[
+  {
+    "id": "enq-01",
+    "kind": "enquiry",
+    "target": {
+      "type": "listing",
+      "id": "lst-1003",
+      "title": "5-hectare estate land on the coastal road",
+      "subtitle": "Eleko, Ibeju-Lekki",
+      "image": "/placeholders/estate-01.jpg"
+    },
+    "fullName": "Capitol Real Estate Fund",
+    "email": "deals@capitolfund.example.com",
+    "phoneNumber": "+234 701 300 5500",
+    "message": "We're interested in partnering on the Eleko estate land. Please share the survey plan and the excision gazette.",
+    "jv": {
+      "generateLoi": true,
+      "letterhead": {
+        "name": "Capitol letterhead.png",
+        "type": "image/png",
+        "size": 19973,
+        "url": "/placeholders/letterhead-capitol.png"
+      },
+      "acceptedFeeTerms": true
+    },
+    "status": "new",
+    "createdAt": "2026-10-12T16:40:00+01:00"
+  },
+  {
+    "id": "enq-02",
+    "kind": "enquiry",
+    "target": {
+      "type": "listing",
+      "id": "lst-1002",
+      "title": "Detached 5-bedroom duplex with BQ",
+      "subtitle": "Maitama, Abuja",
+      "image": "/placeholders/tower-03.jpg"
+    },
+    "fullName": "Halima Yusuf",
+    "email": "halima.y@example.com",
+    "phoneNumber": "+234 803 559 8800",
+    "message": "I'm interested in buying the Maitama duplex. Please arrange an inspection. Weekday afternoons work best.",
+    "status": "new",
+    "createdAt": "2026-10-12T11:05:00+01:00"
+  },
+  {
+    "id": "enq-03",
+    "kind": "enquiry",
+    "target": {
+      "type": "listing",
+      "id": "lst-1001",
+      "title": "2,400 sqm corner plot for luxury apartments",
+      "subtitle": "Lekki Phase 1, Lekki",
+      "image": "/placeholders/tower-02.jpg"
+    },
+    "fullName": "Femi Ogunleye",
+    "email": "femi@ogunleyebuild.example.com",
+    "phoneNumber": "+234 805 410 2299",
+    "message": "We've delivered three apartment blocks in Lekki. Keen to discuss the 40/60 formula on the corner plot.",
+    "jv": {
+      "generateLoi": false,
+      "acceptedFeeTerms": true
+    },
+    "status": "new",
+    "createdAt": "2026-10-11T19:20:00+01:00"
+  },
+  {
+    "id": "enq-04",
+    "kind": "enquiry",
+    "target": {
+      "type": "listing",
+      "id": "lst-1006",
+      "title": "Serviced plot in a gated estate",
+      "subtitle": "Sangotedo, Ajah",
+      "image": "/placeholders/estate-01.jpg"
+    },
+    "fullName": "Uche Nnamdi",
+    "email": "uche.n@example.com",
+    "phoneNumber": "+234 816 774 0021",
+    "message": "Is the Sangotedo plot still available? I can pay outright this month.",
+    "status": "contacted",
+    "createdAt": "2026-10-10T09:15:00+01:00"
+  },
+  {
+    "id": "enq-05",
+    "kind": "enquiry",
+    "target": {
+      "type": "listing",
+      "id": "lst-1011",
+      "title": "Waterfront land for a resort",
+      "subtitle": "Okun Ajah, Lekki",
+      "image": "/placeholders/tower-02.jpg"
+    },
+    "fullName": "Seaside Hospitality Ltd",
+    "email": "projects@seaside.example.com",
+    "phoneNumber": "+234 703 990 1200",
+    "message": "We build boutique resorts and would like the full JV terms for the Okun Ajah waterfront.",
+    "jv": {
+      "generateLoi": true,
+      "letterhead": {
+        "name": "Seaside letterhead.png",
+        "type": "image/png",
+        "size": 20980,
+        "url": "/placeholders/letterhead-seaside.png"
+      },
+      "acceptedFeeTerms": true
+    },
+    "status": "new",
+    "createdAt": "2026-10-09T10:30:00+01:00"
+  },
+  {
+    "id": "enq-06",
+    "kind": "enquiry",
+    "target": {
+      "type": "listing",
+      "id": "lst-1004",
+      "title": "Office block on a main road, fully let",
+      "subtitle": "Victoria Island, Lagos",
+      "image": "/placeholders/tower-01.jpg"
+    },
+    "fullName": "Obinna Okafor",
+    "email": "obinna.okafor@example.com",
+    "phoneNumber": "+234 802 118 7744",
+    "message": "Please send the tenancy schedule and service-charge accounts for the VI office block.",
+    "status": "closed",
+    "createdAt": "2026-10-05T12:45:00+01:00"
+  },
+  {
+    "id": "enq-07",
+    "kind": "enquiry",
+    "target": {
+      "type": "request",
+      "id": "req-2001",
+      "title": "Developer wanted for Lekki corner plot",
+      "subtitle": "Land offer · Lekki Phase 1, Lagos"
+    },
+    "fullName": "Kayode Adewale",
+    "email": "kayode@adewaledev.example.com",
+    "phoneNumber": "+234 809 771 4410",
+    "message": "We're a developer with four completed projects in Lekki. We'd like to be introduced to the landowner.",
+    "status": "new",
+    "createdAt": "2026-10-12T09:50:00+01:00"
+  },
+  {
+    "id": "enq-08",
+    "kind": "enquiry",
+    "target": {
+      "type": "request",
+      "id": "req-2008",
+      "title": "State agency seeking developers for mass housing",
+      "subtitle": "Development · Asaba, Delta"
+    },
+    "fullName": "Northgate Construction",
+    "email": "bids@northgate.example.com",
+    "phoneNumber": "+234 703 222 9081",
+    "message": "We have PPP housing experience in Edo and Delta. How do we get on the shortlist?",
+    "status": "contacted",
+    "createdAt": "2026-10-10T15:30:00+01:00"
+  },
+  {
+    "id": "enq-09",
+    "kind": "enquiry",
+    "target": {
+      "type": "request",
+      "id": "req-2003",
+      "title": "Mandate for a 10-hectare government site",
+      "subtitle": "Partnership · Epe, Lagos"
+    },
+    "fullName": "Ifeoma Chukwu",
+    "email": "ifeoma.c@example.com",
+    "phoneNumber": "+234 806 441 3390",
+    "message": "Our investor group can fund up to 150 units. Is a partial take-up possible?",
+    "status": "new",
+    "createdAt": "2026-10-09T08:20:00+01:00"
+  },
+  {
+    "id": "sub-01",
+    "kind": "listing-submission",
+    "status": "pending",
+    "isOwner": true,
+    "contact": {
+      "fullName": "Olumide Johnson",
+      "email": "olumide.j@example.com",
+      "phoneNumber": "+234 809 201 3344"
+    },
+    "listing": {
+      "title": "Half-plot for a JV in Ikorodu",
+      "dealType": "jv",
+      "propertyType": "land",
+      "area": "Ijede",
+      "city": "Ikorodu",
+      "state": "Lagos",
+      "sizeSqm": 300,
+      "price": 25000000,
+      "titleDocument": "Survey plan only",
+      "description": "Dry half-plot on a tarred road, five minutes from the Ijede jetty. I'd like a developer to build two flats and share them.",
+      "highlights": [
+        "Tarred road",
+        "Near the jetty",
+        "Fenced"
+      ],
+      "images": [
+        "/placeholders/estate-02.jpg",
+        "/placeholders/tower-01.jpg"
+      ],
+      "jv": {
+        "sharingFormula": "40/60",
+        "sharingNegotiable": true,
+        "premium": 0,
+        "proposal": "Two 2-bedroom flats",
+        "duration": "12 months"
+      },
+      "ownerName": "Olumide Johnson"
+    },
+    "documents": [
+      {
+        "name": "Survey plan.jpg",
+        "type": "image/jpeg",
+        "size": 412000,
+        "url": "/placeholders/estate-02.jpg"
+      }
+    ],
+    "createdAt": "2026-10-12T13:10:00+01:00",
+    "updatedAt": "2026-10-12T13:10:00+01:00"
+  },
+  {
+    "id": "sub-02",
+    "kind": "listing-submission",
+    "status": "pending",
+    "isOwner": false,
+    "contact": {
+      "fullName": "Grace Etim",
+      "email": "grace.etim@example.com",
+      "phoneNumber": "+234 802 330 1122"
+    },
+    "listing": {
+      "title": "4-bedroom detached house with pool",
+      "dealType": "sale",
+      "propertyType": "residential",
+      "area": "Trans Amadi",
+      "city": "Port Harcourt",
+      "state": "Rivers",
+      "sizeSqm": 650,
+      "price": 210000000,
+      "titleDocument": "C of O",
+      "description": "Detached four-bedroom house with a swimming pool and two-car garage, sold on behalf of the owner, who has relocated abroad.",
+      "highlights": [
+        "Swimming pool",
+        "Two-car garage",
+        "Gated street"
+      ],
+      "images": [
+        "/placeholders/tower-03.jpg",
+        "/placeholders/estate-01.jpg"
+      ],
+      "ownerName": "Mr. & Mrs. Ekpo"
+    },
+    "documents": [
+      {
+        "name": "C of O.jpg",
+        "type": "image/jpeg",
+        "size": 538000,
+        "url": "/placeholders/tower-03.jpg"
+      },
+      {
+        "name": "Power of attorney.jpg",
+        "type": "image/jpeg",
+        "size": 301000,
+        "url": "/placeholders/estate-01.jpg"
+      }
+    ],
+    "createdAt": "2026-10-11T10:00:00+01:00",
+    "updatedAt": "2026-10-11T10:00:00+01:00"
+  },
+  {
+    "id": "sub-03",
+    "kind": "listing-submission",
+    "status": "rejected",
+    "isOwner": true,
+    "contact": {
+      "fullName": "Tunde Bakare",
+      "email": "tunde.bakare@example.com",
+      "phoneNumber": "+234 812 345 6789"
+    },
+    "listing": {
+      "title": "Land for sale",
+      "dealType": "sale",
+      "propertyType": "land",
+      "area": "Various",
+      "city": "Lagos",
+      "state": "Lagos",
+      "sizeSqm": 1000,
+      "price": 40000000,
+      "titleDocument": "Survey plan only",
+      "description": "Several plots available, can close fast.",
+      "highlights": [],
+      "images": [
+        "/placeholders/estate-02.jpg"
+      ],
+      "ownerName": "Tunde Bakare"
+    },
+    "reviewNote": "No specific location or title documents. Please resubmit with the plot's address and survey plan.",
+    "createdAt": "2026-10-02T18:00:00+01:00",
+    "updatedAt": "2026-10-03T09:00:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {},
+    "profileCompleted": true,
+    "updatedAt": "2026-06-11T10:00:00+01:00",
+    "id": "usr-01",
+    "fullName": "Adebayo Okonkwo",
+    "email": "adebayo@example.com",
+    "phoneNumber": "+234 803 111 2034",
+    "role": "Landowner",
+    "category": "Individual",
+    "status": "active",
+    "profile": {
+      "landLocation": "Lekki Phase 1, Lagos",
+      "landSize": "2,400 sqm",
+      "documentationStatus": "Fully Documented",
+      "preferredPartnershipType": "Joint Venture",
+      "landDescription": "Dry, fenced corner plot two streets off Admiralty Way, with two road frontages."
+    },
+    "createdAt": "2026-06-11T10:00:00+01:00",
+    "lastActiveAt": "2026-10-11T18:20:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {},
+    "profileCompleted": true,
+    "updatedAt": "2026-06-19T09:30:00+01:00",
+    "id": "usr-02",
+    "fullName": "Fatima Bello",
+    "email": "fatima.bello@example.com",
+    "phoneNumber": "+234 805 222 8841",
+    "role": "Landowner",
+    "category": "Individual",
+    "status": "active",
+    "profile": {
+      "landLocation": "Maitama, Abuja",
+      "landSize": "1,100 sqm",
+      "documentationStatus": "Fully Documented",
+      "preferredPartnershipType": "Outright Sale",
+      "landDescription": "Finished five-bedroom duplex with a two-room BQ on a quiet close."
+    },
+    "createdAt": "2026-06-19T09:30:00+01:00",
+    "lastActiveAt": "2026-10-10T09:12:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {
+      "companyProfile": {
+        "name": "Eze Developments company profile.jpg",
+        "type": "image/jpeg",
+        "size": 845000,
+        "url": "/placeholders/tower-02.jpg"
+      },
+      "proofOfFunds": {
+        "name": "Bank reference letter.jpg",
+        "type": "image/jpeg",
+        "size": 312000,
+        "url": "/placeholders/estate-02.jpg"
+      }
+    },
+    "profileCompleted": true,
+    "updatedAt": "2026-10-15T22:30:39.103Z",
+    "id": "usr-03",
+    "fullName": "Chinedu Eze",
+    "email": "demo@jointventureassets.com",
+    "phoneNumber": "+234 806 773 0192",
+    "role": "Investor",
+    "category": "Individual",
+    "status": "active",
+    "profile": {
+      "investmentType": "Joint Venture",
+      "budgetRange": "$1M - $5M",
+      "preferredLocation": "Abuja or Lagos mainland",
+      "projectType": "Residential",
+      "yearsOfExperience": "6-10 years",
+      "companyName": "Eze Developments"
+    },
+    "createdAt": "2026-07-02T15:45:00+01:00",
+    "lastActiveAt": "2026-10-15T22:30:39.096Z"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {},
+    "profileCompleted": true,
+    "updatedAt": "2026-07-08T11:20:00+01:00",
+    "id": "usr-04",
+    "fullName": "Odeda Farmers Cooperative",
+    "email": "info@odedacoop.example.com",
+    "phoneNumber": "+234 809 440 1180",
+    "role": "Landowner",
+    "category": "Cooperative",
+    "status": "active",
+    "profile": {
+      "organizationType": "Cooperative",
+      "registrationLicenseNumber": "OG/COOP/2011/0482",
+      "landLocation": "Odeda, Ogun",
+      "landSize": "20 hectares",
+      "documentationStatus": "Partially Documented",
+      "preferredPartnershipType": "Joint Venture",
+      "landDescription": "Fertile farmland with a stream along one edge and road access for trucks."
+    },
+    "createdAt": "2026-07-08T11:20:00+01:00",
+    "lastActiveAt": "2026-10-06T10:31:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {},
+    "profileCompleted": true,
+    "updatedAt": "2026-07-21T13:00:00+01:00",
+    "id": "usr-05",
+    "fullName": "Ngozi Umeh",
+    "email": "ngozi.umeh@example.com",
+    "phoneNumber": "+234 802 990 4471",
+    "role": "Buyer",
+    "category": "Individual",
+    "status": "active",
+    "profile": {
+      "propertyWanted": "Residential",
+      "budgetRange": "$500k - $1M",
+      "preferredLocation": "Lekki or Ikoyi",
+      "purpose": "To live in",
+      "timeline": "Within 3 months",
+      "paymentMethod": "Outright payment"
+    },
+    "createdAt": "2026-07-21T13:00:00+01:00",
+    "lastActiveAt": "2026-10-09T16:45:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {
+      "companyProfile": {
+        "name": "Capitol Fund profile 2026.jpg",
+        "type": "image/jpeg",
+        "size": 1204000,
+        "url": "/placeholders/tower-01.jpg"
+      },
+      "proofOfFunds": {
+        "name": "Proof of funds - Access Bank.jpg",
+        "type": "image/jpeg",
+        "size": 288000,
+        "url": "/placeholders/estate-01.jpg"
+      }
+    },
+    "profileCompleted": true,
+    "updatedAt": "2026-08-01T10:10:00+01:00",
+    "id": "usr-06",
+    "fullName": "Capitol Real Estate Fund",
+    "email": "deals@capitolfund.example.com",
+    "phoneNumber": "+234 701 300 5500",
+    "role": "Investor",
+    "category": "Cooperative",
+    "status": "active",
+    "profile": {
+      "investmentType": "Equity",
+      "organizationType": "Corporation",
+      "registrationLicenseNumber": "RC 1458823",
+      "budgetRange": "Over $10M",
+      "preferredLocation": "Ibeju-Lekki",
+      "projectType": "Mixed Use",
+      "yearsOfExperience": "11-15 years",
+      "companyName": "Capitol Real Estate Fund"
+    },
+    "createdAt": "2026-08-01T10:10:00+01:00",
+    "lastActiveAt": "2026-10-11T12:00:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {},
+    "profileCompleted": true,
+    "updatedAt": "2026-08-14T08:50:00+01:00",
+    "id": "usr-07",
+    "fullName": "Ibrahim Danjuma",
+    "email": "ibrahim.d@example.com",
+    "phoneNumber": "+234 803 664 2210",
+    "role": "Landowner",
+    "category": "Individual",
+    "status": "active",
+    "profile": {
+      "landLocation": "Guzape, Abuja",
+      "landSize": "1,200 sqm",
+      "documentationStatus": "Fully Documented",
+      "preferredPartnershipType": "Joint Venture",
+      "landDescription": "Gentle-slope plot with city views and a tarred access road."
+    },
+    "createdAt": "2026-08-14T08:50:00+01:00",
+    "lastActiveAt": "2026-09-25T16:21:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {
+      "companyProfile": {
+        "name": "Profile.jpg",
+        "type": "image/jpeg",
+        "size": 96000,
+        "url": "/placeholders/estate-02.jpg"
+      }
+    },
+    "profileCompleted": true,
+    "updatedAt": "2026-08-20T19:05:00+01:00",
+    "id": "usr-08",
+    "fullName": "Tunde Bakare",
+    "email": "tunde.bakare@example.com",
+    "phoneNumber": "+234 812 345 6789",
+    "role": "Investor",
+    "category": "Individual",
+    "status": "suspended",
+    "profile": {
+      "investmentType": "Debt",
+      "budgetRange": "Under $100k",
+      "preferredLocation": "Anywhere",
+      "projectType": "Residential",
+      "yearsOfExperience": "0-2 years",
+      "companyName": ""
+    },
+    "createdAt": "2026-08-20T19:05:00+01:00",
+    "lastActiveAt": "2026-09-02T10:00:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {
+      "companyProfile": {
+        "name": "DSHA agency profile.jpg",
+        "type": "image/jpeg",
+        "size": 990000,
+        "url": "/placeholders/tower-03.jpg"
+      }
+    },
+    "profileCompleted": true,
+    "updatedAt": "2026-09-03T09:00:00+01:00",
+    "id": "usr-09",
+    "fullName": "Delta State Housing Agency",
+    "email": "projects@dsha.example.gov.ng",
+    "phoneNumber": "+234 803 700 1000",
+    "role": "Investor",
+    "category": "Government",
+    "status": "active",
+    "profile": {
+      "investmentType": "Joint Venture",
+      "organizationType": "Corporation",
+      "registrationLicenseNumber": "DTSG/HA/001",
+      "budgetRange": "Over $10M",
+      "preferredLocation": "Asaba, Delta",
+      "projectType": "Residential",
+      "yearsOfExperience": "20+ years",
+      "companyName": "Delta State Housing Agency"
+    },
+    "createdAt": "2026-09-03T09:00:00+01:00",
+    "lastActiveAt": "2026-10-08T14:30:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {},
+    "profileCompleted": true,
+    "updatedAt": "2026-09-16T12:40:00+01:00",
+    "id": "usr-10",
+    "fullName": "Amaka Obi",
+    "email": "amaka.obi@example.com",
+    "phoneNumber": "+234 816 202 3344",
+    "role": "Buyer",
+    "category": "Individual",
+    "status": "active",
+    "profile": {
+      "propertyWanted": "Land",
+      "budgetRange": "$100k - $500k",
+      "preferredLocation": "Sangotedo or Ajah",
+      "purpose": "As an investment",
+      "timeline": "Within 6 months",
+      "paymentMethod": "Instalments"
+    },
+    "createdAt": "2026-09-16T12:40:00+01:00",
+    "lastActiveAt": "2026-10-12T07:55:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {},
+    "profileCompleted": true,
+    "updatedAt": "2026-10-04T17:15:00+01:00",
+    "id": "usr-11",
+    "fullName": "Bisi Adeleke",
+    "email": "bisi.adeleke@example.com",
+    "phoneNumber": "+234 805 881 7720",
+    "role": "Landowner",
+    "category": "Individual",
+    "status": "pending",
+    "profile": {
+      "landLocation": "Okun Ajah, Lekki",
+      "landSize": "8,000 sqm",
+      "documentationStatus": "In Progress",
+      "preferredPartnershipType": "Joint Venture",
+      "landDescription": "Lagoon-front land, sand-filled, suited to a resort."
+    },
+    "createdAt": "2026-10-04T17:15:00+01:00",
+    "lastActiveAt": "2026-10-11T21:10:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {
+      "companyProfile": {
+        "name": "Nwosu Capital profile.jpg",
+        "type": "image/jpeg",
+        "size": 402000,
+        "url": "/placeholders/estate-01.jpg"
+      }
+    },
+    "profileCompleted": true,
+    "updatedAt": "2026-10-10T10:00:00+01:00",
+    "id": "usr-12",
+    "fullName": "Kelechi Nwosu",
+    "email": "kelechi.n@example.com",
+    "phoneNumber": "+234 708 119 0045",
+    "role": "Investor",
+    "category": "Individual",
+    "status": "pending",
+    "profile": {
+      "investmentType": "Equity",
+      "budgetRange": "$100k - $500k",
+      "preferredLocation": "Lagos",
+      "projectType": "Residential",
+      "yearsOfExperience": "0-2 years",
+      "companyName": "Nwosu Capital"
+    },
+    "createdAt": "2026-10-10T10:00:00+01:00",
+    "lastActiveAt": "2026-10-12T09:40:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "admin123",
+    "documents": {},
+    "profileCompleted": true,
+    "updatedAt": "2026-06-01T09:00:00+01:00",
+    "id": "usr-admin",
+    "fullName": "JVA Admin",
+    "email": "admin@jointventureassets.com",
+    "phoneNumber": "",
+    "role": "Admin",
+    "category": "Staff",
+    "status": "active",
+    "profile": {},
+    "createdAt": "2026-06-01T09:00:00+01:00",
+    "lastActiveAt": "2026-10-12T09:00:00+01:00"
+  },
+  {
+    "fullName": "Chidera Kennedy",
+    "email": "okolochidera223@gmail.com",
+    "password": "Kennedy123",
+    "role": "Buyer",
+    "category": "Cooperative",
+    "id": "usr-mva46qulv25s",
+    "kind": "account",
+    "phoneNumber": "",
+    "profile": {},
+    "documents": {},
+    "profileCompleted": false,
+    "status": "pending",
+    "createdAt": "2026-10-15T22:32:37.485Z",
+    "updatedAt": "2026-10-15T22:32:37.485Z",
+    "lastActiveAt": "2026-10-15T22:32:37.485Z"
+  },
+  {
+    "fullName": "Chidera Kennedy",
+    "email": "kennedyokolo222@gmail.com",
+    "password": "Kennedy123",
+    "role": "Landowner",
+    "category": "Individual",
+    "id": "usr-mva56n9ka9qv",
+    "kind": "account",
+    "phoneNumber": "",
+    "profile": {},
+    "documents": {},
+    "profileCompleted": false,
+    "status": "pending",
+    "createdAt": "2026-10-15T23:00:32.456Z",
+    "updatedAt": "2026-10-15T23:00:32.456Z",
+    "lastActiveAt": "2026-10-15T23:00:32.456Z"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {},
+    "profileCompleted": true,
+    "updatedAt": "2026-10-08T15:20:00+01:00",
+    "id": "usr-13",
+    "fullName": "Olumide Johnson",
+    "email": "olumide.j@example.com",
+    "phoneNumber": "+234 809 201 3344",
+    "role": "Landowner",
+    "category": "Individual",
+    "status": "active",
+    "profile": {
+      "landLocation": "Ijede, Ikorodu",
+      "landSize": "300 sqm",
+      "documentationStatus": "In Progress",
+      "preferredPartnershipType": "Joint Venture",
+      "landDescription": "Dry half-plot on a tarred road near the Ijede jetty."
+    },
+    "createdAt": "2026-10-08T15:20:00+01:00",
+    "lastActiveAt": "2026-10-12T13:10:00+01:00"
+  },
+  {
+    "kind": "account",
+    "password": "demo1234",
+    "documents": {},
+    "profileCompleted": true,
+    "updatedAt": "2026-10-06T11:00:00+01:00",
+    "id": "usr-14",
+    "fullName": "Grace Etim",
+    "email": "grace.etim@example.com",
+    "phoneNumber": "+234 802 330 1122",
+    "role": "Landowner",
+    "category": "Individual",
+    "status": "active",
+    "profile": {
+      "landLocation": "GRA Phase 2, Port Harcourt",
+      "landSize": "650 sqm",
+      "documentationStatus": "Fully Documented",
+      "preferredPartnershipType": "Outright Sale",
+      "landDescription": "Four-bedroom detached house on a corner plot."
+    },
+    "createdAt": "2026-10-06T11:00:00+01:00",
+    "lastActiveAt": "2026-10-11T16:45:00+01:00"
+  }
+]

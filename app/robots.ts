@@ -1,13 +1,24 @@
-import { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/site";
 
+/** Public pages are open to search engines; account and form-flow pages are kept out. */
 export default function robots(): MetadataRoute.Robots {
-    return {
-        rules: {
-            userAgent: "*",
-            allow: ["/", "/contact/", "/login/", "/blog/"],
-            disallow: ["/admin/", "/api/", "/how-it-works/", "/submit-request/", "/reset-password/", "/dashboard/", "/complete-profile/", "/browse-requests/", "/forgot-password/", "/requests/"],
-            
-        },
-        sitemap: "https://www.jointventureassets.com/sitemap.xml"
-    }
+  return {
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: [
+        "/api/",
+        "/auth/",
+        "/dashboard",
+        "/complete-profile",
+        "/forgot-password",
+        "/reset-password",
+        "/submit-request",
+        "/browse-requests",
+        "/requests/",
+      ],
+    },
+    sitemap: `${SITE_URL}/sitemap.xml`,
+  };
 }
